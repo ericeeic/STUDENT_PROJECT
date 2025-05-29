@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
-CSV1 = st.file_uploader("CSV:", accept_multiple_files=True)
+CSV1 = st.file_uploader("CSV:", accept_multiple_files=True,type=['csv','txt','jpg','png'])
 for i in CSV1:
-   st.write("filename:", i.name)
-   x=pd.read_csv(i ,encoding="BIG5")
-   st.dataframe(x)
-   
-   
-   
+   if i.name.endswith(('.jpg', '.jpeg', '.png')):
+       st.write("filename:", i.name)
+       st.image(CSV1)
+   elif i.name.endswith(('.csv','.txt')):
+       st.write("filename:", i.name)
+       x=pd.read_csv(i ,encoding="BIG5")
+       st.dataframe(x)
+      
