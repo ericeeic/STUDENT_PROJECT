@@ -4,7 +4,7 @@ CSV1 = st.file_uploader("CSV:", accept_multiple_files=True,type=['csv','txt','jp
 for i in CSV1:
    if i.name.endswith(('.jpg', '.jpeg', '.png')):
        st.write("filename:", i.name)
-       st.image(CSV1)
+       st.image(i)
    elif i.name.endswith(('.csv','.txt')):
        st.write("filename:", i.name)
        x=pd.read_csv(i ,encoding="BIG5")
