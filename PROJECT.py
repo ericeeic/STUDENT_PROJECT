@@ -6,7 +6,12 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 import google.generativeai as genai
 import matplotlib
-matplotlib.rcParams['font.family'] = 'Microsoft JhengHei'  # 設定中文字型
+from matplotlib import font_manager
+
+# 自動尋找系統中文字型
+zh_font = font_manager.FontProperties(fname='C:/Windows/Fonts/msjh.ttc')  # 微軟正黑體
+matplotlib.rcParams['font.family'] = zh_font.get_name()
+
 
 
 
