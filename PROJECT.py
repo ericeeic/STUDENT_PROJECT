@@ -7,7 +7,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
-# 載入 .env 檔案
+# 讀取 .env 檔案
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 
@@ -18,6 +18,11 @@ if not API_KEY:
 
 # 設定 Gemini API
 genai.configure(api_key=API_KEY)
+
+# 初始化 Session State
+if 'corr_dict' not in st.session_state:
+    st.session_state['corr_dict'] = {}
+    st.session_state['has_data'] = False
 
 # App 標題
 st.title("STREAMLIT作業")
@@ -54,7 +59,7 @@ with tab1:
             
             # 計算相關係數
             corr = df.corr()
-            st.session_state['corr'] = corr
+            st.session_state['corr_dict'][uploaded_file.name] = corr
             st.session_state['has_data'] = True
 
 # ---- tab2: Gemini 聊天 ----
@@ -72,10 +77,13 @@ with tab2:
 with tab3:
     st.header("相關係數分析")
     if st.session_state.get('has_data', False):
-        corr = st.session_state['corr']
-        st.write("相關係數矩陣")
+        file_options = list(st.session_state['corr_dict'].keys())
+        selected_file = st.selectbox("選擇要分析的檔案", file_options)
+
+        corr = st.session_state['corr_dict'][selected_file]
+        st.write(f"檔案 {selected_file} 的相關係數矩陣")
         st.dataframe(corr, use_container_width=True)
-        
+
         st.write("相關係數熱力圖 (Plotly)")
         fig = px.imshow(
             corr,
