@@ -45,12 +45,22 @@ with tab1:
 
 with tab2:
     st.header("Gemini 聊天機器人")
+    # 初始化聊天記錄（存在 session_state）
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
     model = genai.GenerativeModel("models/gemini-1.5-flash")
-    chat = genai.ChatSession(model=model)
+    chat = genai.ChatSession(model=model, history=st.session_state.chat_history)
+
     user_input = st.text_input("請輸入問題")
     if user_input:
         response = chat.send_message(user_input)
-        st.write(response.text)
+        st.session_state.chat_history.append({"user": user_input, "bot": response.text})
+    
+    # 顯示聊天記錄
+    if st.session_state.chat_history:
+        for chat_turn in st.session_state.chat_history:
+            st.markdown(f"**你:** {chat_turn['user']}")
+            st.markdown(f"**Gemini:** {chat_turn['bot']}")
 
 with tab3:
     st.header("相關係數分析")
