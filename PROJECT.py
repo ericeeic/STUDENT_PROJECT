@@ -45,23 +45,12 @@ with tab1:
 
 with tab2:
     st.header("Gemini 聊天機器人")
-
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-
+    model = genai.GenerativeModel("models/gemini-1.5-flash")
+    chat = genai.ChatSession(model=model)
     user_input = st.text_input("請輸入問題")
     if user_input:
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
-        chat = genai.ChatSession(model=model, history=st.session_state.chat_history)
         response = chat.send_message(user_input)
-
-        # 新增歷史時，content改成dict格式
-        st.session_state.chat_history.append({"author": "user", "content": {"text": user_input}})
-        st.session_state.chat_history.append({"author": "bot", "content": {"text": response.text}})
-
-    for turn in st.session_state.chat_history:
-        who = "你" if turn["author"] == "user" else "Gemini"
-        st.markdown(f"**{who}:** {turn['content']['text']}")
+        st.write(response.text)
 
 with tab3:
     st.header("相關係數分析")
@@ -94,3 +83,6 @@ with tab3:
                 st.info("判斷：**無明顯相關**")
     else:
         st.info("請先上傳並分析 CSV 檔案")
+
+
+
