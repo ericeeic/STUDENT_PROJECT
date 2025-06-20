@@ -96,7 +96,8 @@ with tab3:
             vmax=1,
             square=True,
             linewidths=0.5,
-            ax=ax
+            ax=ax,
+            annot_kws={"fontproperties": zh_font}
         )
         st.pyplot(fig)
 
