@@ -5,6 +5,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 import google.generativeai as genai
+import matplotlib
+matplotlib.rcParams['font.family'] = 'Microsoft JhengHei'  # 設定中文字型
+
+
+
 
 API_KEY = "AIzaSyAP7BSVTOBJo2CDpincq7dAlTmDG4Ix5c0"
 
