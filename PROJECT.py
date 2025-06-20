@@ -4,9 +4,14 @@ import chardet
 import plotly.express as px
 from sklearn.preprocessing import LabelEncoder
 import google.generativeai as genai
+from dotenv import load_dotenv
+import os
 
+# 載入 .env 檔案
+load_dotenv()
 
-API_KEY = "AIzaSyAP7BSVTOBJo2CDpincq7dAlTmDG4Ix5c0"
+# 從環境變數讀取 API_KEY
+API_KEY = os.getenv("API_KEY")
 
 st.title("CSV 檔案分析與 Gemini 聊天")
 
@@ -66,7 +71,6 @@ with tab3:
         
         st.write("相關係數熱力圖 (Plotly)")
 
-        # 用 Plotly 畫熱力圖
         fig = px.imshow(
             corr,
             text_auto=True,
