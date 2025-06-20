@@ -7,10 +7,20 @@ from sklearn.preprocessing import LabelEncoder
 import google.generativeai as genai
 import matplotlib
 from matplotlib import font_manager
+import os
 
-# 自動尋找系統中文字型
-zh_font = font_manager.FontProperties(fname='C:/Windows/Fonts/msjh.ttc')  # 微軟正黑體
-matplotlib.rcParams['font.family'] = zh_font.get_name()
+# 判斷系統平台，設定中文字型
+if os.name == 'nt':  # Windows
+    font_path = 'C:/Windows/Fonts/msjh.ttc'  # 微軟正黑體
+else:  # Linux / Mac
+    font_path = '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'  # Noto Sans CJK
+
+# 確認字型檔案是否存在
+if os.path.exists(font_path):
+    zh_font = font_manager.FontProperties(fname=font_path)
+    matplotlib.rcParams['font.family'] = zh_font.get_name()
+else:
+    print(f"⚠️ 找不到字型檔案: {font_path}，將使用預設字型")
 
 
 
