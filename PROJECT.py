@@ -12,8 +12,8 @@ API_KEY = "AIzaSyAP7BSVTOBJo2CDpincq7dAlTmDG4Ix5c0"
 # Streamlit 標題
 st.title("CSV 檔案分析與 Gemini 聊天")
 
-# 建立兩個 tab
-tab1, tab2 = st.tabs(["CSV 檔案分析", "Gemini 聊天機器人"])
+# 建立三個 tab
+tab1, tab2, tab3 = st.tabs(["CSV 檔案分析", "Gemini 聊天機器人", "相關係數熱力圖"])
 
 with tab1:
     st.header("上傳 CSV 檔案並分析")
@@ -50,23 +50,31 @@ with tab1:
             # 計算相關係數
             corr = df.corr()
             
+            # 將相關係數矩陣存到 session_state，供 tab3 使用
+            st.session_state['corr'] = corr
+            
             st.write("相關係數矩陣")
             st.dataframe(corr)
-            
-            # 畫熱力圖
-            st.write("相關係數熱力圖")
-            fig, ax = plt.subplots(figsize=(10, 8))
-            sns.heatmap(
-                corr,
-                annot=True,
-                cmap='coolwarm',
-                vmin=-1,
-                vmax=1,
-                square=True,
-                linewidths=0.5,
-                ax=ax
-            )
-            st.pyplot(fig)
+
+with tab3:
+    st.header("相關係數熱力圖")
+    # 確認 session_state 有相關係數資料
+    if 'corr' in st.session_state:
+        corr = st.session_state['corr']
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(
+            corr,
+            annot=True,
+            cmap='coolwarm',
+            vmin=-1,
+            vmax=1,
+            square=True,
+            linewidths=0.5,
+            ax=ax
+        )
+        st.pyplot(fig)
+    else:
+        st.write("請先在「CSV 檔案分析」上傳並分析 CSV 檔案，才能看到熱力圖。")
 
 with tab2:
     st.header("Gemini 聊天機器人")
