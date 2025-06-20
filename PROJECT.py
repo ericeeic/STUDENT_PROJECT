@@ -21,6 +21,8 @@ if os.path.exists(font_path):
     matplotlib.rcParams['font.family'] = zh_font.get_name()
 else:
     print(f"⚠️ 找不到字型檔案: {font_path}，將使用預設字型")
+    zh_font = font_manager.FontProperties()  # 定義一個預設的 zh_font，避免 NameError
+
 
 
 
