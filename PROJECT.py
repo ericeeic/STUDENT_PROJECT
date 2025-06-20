@@ -49,24 +49,19 @@ with tab2:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    with st.form("chat_form", clear_on_submit=True):
-        user_input = st.text_input("請輸入問題")
-        submit = st.form_submit_button("送出")
-
-    if submit and user_input:
-        # 建立新 ChatSession，帶入目前所有對話
+    user_input = st.text_input("請輸入問題")
+    if user_input:
         model = genai.GenerativeModel("models/gemini-1.5-flash")
         chat = genai.ChatSession(model=model, history=st.session_state.chat_history)
         response = chat.send_message(user_input)
 
-        # 將新的對話加入 chat_history
-        st.session_state.chat_history.append({"author": "user", "content": user_input})
-        st.session_state.chat_history.append({"author": "bot", "content": response.text})
+        # 新增歷史時，content改成dict格式
+        st.session_state.chat_history.append({"author": "user", "content": {"text": user_input}})
+        st.session_state.chat_history.append({"author": "bot", "content": {"text": response.text}})
 
-    # 顯示聊天記錄
     for turn in st.session_state.chat_history:
-        prefix = "你" if turn["author"] == "user" else "Gemini"
-        st.markdown(f"**{prefix}:** {turn['content']}")
+        who = "你" if turn["author"] == "user" else "Gemini"
+        st.markdown(f"**{who}:** {turn['content']['text']}")
 
 with tab3:
     st.header("相關係數分析")
