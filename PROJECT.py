@@ -42,8 +42,8 @@ with tab1:
                         st.warning(f"欄位 '{col}' 編碼失敗：{e}")
             
             corr = df.corr()
-            st.session_state['corr'] = corr  # 存起來給 tab3 用
-            st.session_state['has_data'] = True  # 標記已上傳
+            st.session_state['corr'] = corr
+            st.session_state['has_data'] = True
 
 with tab3:
     st.header("相關係數分析")
@@ -65,6 +65,35 @@ with tab3:
             ax=ax
         )
         st.pyplot(fig)
+        
+        # 分析相關係數矩陣，列出顯著正相關與負相關
+        st.write("### 正相關與負相關對照表")
+        threshold = 0.5  # 你可以調整這個閾值，代表什麼程度的相關算顯著
+        
+        pos_corr = []
+        neg_corr = []
+        for i in corr.columns:
+            for j in corr.columns:
+                if i != j:
+                    val = corr.loc[i, j]
+                    if val >= threshold:
+                        pos_corr.append((i, j, val))
+                    elif val <= -threshold:
+                        neg_corr.append((i, j, val))
+        
+        if pos_corr:
+            st.write("**正相關對** (相關係數 >= {:.2f}):".format(threshold))
+            for i, j, val in pos_corr:
+                st.write(f"{i} 與 {j} ：相關係數 = {val:.3f}")
+        else:
+            st.write("沒有顯著的正相關")
+        
+        if neg_corr:
+            st.write("**負相關對** (相關係數 <= {:.2f}):".format(-threshold))
+            for i, j, val in neg_corr:
+                st.write(f"{i} 與 {j} ：相關係數 = {val:.3f}")
+        else:
+            st.write("沒有顯著的負相關")
     else:
         st.info("請先在「CSV 檔案分析」上傳並分析 CSV 檔案")
 
