@@ -1,39 +1,81 @@
 import streamlit as st
-import google.generativeai as genai
 import pandas as pd
 import chardet
-from dotenv import load_dotenv
-import os
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelEncoder
+import google.generativeai as genai
 
+# Gemini API Key 設定（請換成你自己的）
+API_KEY = "AIzaSyAP7BSVTOBJo2CDpincq7dAlTmDG4Ix5c0"
 
-load_dotenv()
-API_KEY = os.getenv('API_KEY')
+# Streamlit 標題
+st.title("CSV 檔案分析與 Gemini 聊天")
 
+# 建立兩個 tab
+tab1, tab2 = st.tabs(["CSV 檔案分析", "Gemini 聊天機器人"])
 
-tab1, tab2 = st.tabs(["CSV檔案", "GEMINI"])
 with tab1:
-    CSV1 = st.file_uploader("上傳檔案:", accept_multiple_files=True, type=['csv', 'txt', 'jpg', 'png'])
+    st.header("上傳 CSV 檔案並分析")
+    uploaded_files = st.file_uploader(
+        "請上傳 CSV 檔案 (可多檔)", 
+        type=['csv'], 
+        accept_multiple_files=True
+    )
+    
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            st.subheader(f"檔案：{uploaded_file.name}")
+            
+            # 讀取檔案二進位資料判斷編碼
+            raw_bytes = uploaded_file.read()
+            encoding = chardet.detect(raw_bytes)['encoding']
+            uploaded_file.seek(0)  # 重置指標
+            
+            # 讀取 DataFrame
+            df = pd.read_csv(uploaded_file, encoding=encoding)
+            st.write("資料預覽")
+            st.dataframe(df.head())
+            
+            # 類別欄位轉數字
+            cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+            if cat_cols:
+                le = LabelEncoder()
+                for col in cat_cols:
+                    try:
+                        df[col] = le.fit_transform(df[col].astype(str))
+                    except Exception as e:
+                        st.warning(f"欄位 '{col}' 編碼失敗：{e}")
+            
+            # 計算相關係數
+            corr = df.corr()
+            
+            st.write("相關係數矩陣")
+            st.dataframe(corr)
+            
+            # 畫熱力圖
+            st.write("相關係數熱力圖")
+            fig, ax = plt.subplots(figsize=(10, 8))
+            sns.heatmap(
+                corr,
+                annot=True,
+                cmap='coolwarm',
+                vmin=-1,
+                vmax=1,
+                square=True,
+                linewidths=0.5,
+                ax=ax
+            )
+            st.pyplot(fig)
 
-    if CSV1:
-        for i in CSV1:
-            st.write("檔名:", i.name)
-            if i.name.endswith(('.jpg', '.jpeg', '.png')):
-                st.image(i)
-            elif i.name.endswith(('.csv', '.txt')):
-                    # 讀取檔案內容並偵測編碼
-                file_contents = i.read()
-                encoding_result = chardet.detect(file_contents)['encoding']
-                i.seek(0)  # 重置指標
-                df = pd.read_csv(i, encoding=encoding_result)
-                st.dataframe(df)
-   
+with tab2:
+    st.header("Gemini 聊天機器人")
     
-    
-with tab2:    
+    # 設定 Gemini API
     genai.configure(api_key=API_KEY)
-    st.title("Gemini Chatbot")
     model = genai.GenerativeModel("models/gemini-1.5-flash")
     chat = genai.ChatSession(model=model)
+    
     user_input = st.text_input("請輸入問題")
     if user_input:
         response = chat.send_message(user_input)
