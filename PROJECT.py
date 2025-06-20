@@ -44,6 +44,20 @@ with tab1:
             corr = df.corr()
             st.session_state['corr'] = corr
             st.session_state['has_data'] = True
+            
+            
+            
+with tab2:
+    st.header("Gemini 聊天機器人")
+    
+    genai.configure(api_key=API_KEY)
+    model = genai.GenerativeModel("models/gemini-1.5-flash")
+    chat = genai.ChatSession(model=model)
+    
+    user_input = st.text_input("請輸入問題")
+    if user_input:
+        response = chat.send_message(user_input)
+        st.write(response.text)
 
 with tab3:
     st.header("相關係數分析")
@@ -51,7 +65,7 @@ with tab3:
         corr = st.session_state['corr']
         st.write("相關係數矩陣")
         st.dataframe(corr)
-        
+
         st.write("相關係數熱力圖")
         fig, ax = plt.subplots(figsize=(10, 8))
         sns.heatmap(
@@ -65,46 +79,25 @@ with tab3:
             ax=ax
         )
         st.pyplot(fig)
-        
-        # 分析相關係數矩陣，列出顯著正相關與負相關
-        st.write("### 正相關與負相關對照表")
-        threshold = 0.5  # 你可以調整這個閾值，代表什麼程度的相關算顯著
-        
-        pos_corr = []
-        neg_corr = []
-        for i in corr.columns:
-            for j in corr.columns:
-                if i != j:
-                    val = corr.loc[i, j]
-                    if val >= threshold:
-                        pos_corr.append((i, j, val))
-                    elif val <= -threshold:
-                        neg_corr.append((i, j, val))
-        
-        if pos_corr:
-            st.write("**正相關對** (相關係數 >= {:.2f}):".format(threshold))
-            for i, j, val in pos_corr:
-                st.write(f"{i} 與 {j} ：相關係數 = {val:.3f}")
-        else:
-            st.write("沒有顯著的正相關")
-        
-        if neg_corr:
-            st.write("**負相關對** (相關係數 <= {:.2f}):".format(-threshold))
-            for i, j, val in neg_corr:
-                st.write(f"{i} 與 {j} ：相關係數 = {val:.3f}")
-        else:
-            st.write("沒有顯著的負相關")
+
+        st.write("### 選擇兩個欄位來判斷相關關係")
+        cols = corr.columns.tolist()
+        col1 = st.selectbox("選擇欄位1", cols)
+        col2 = st.selectbox("選擇欄位2", [c for c in cols if c != col1])
+
+        if col1 and col2:
+            val = corr.loc[col1, col2]
+            st.write(f"{col1} 與 {col2} 的相關係數是：{val:.3f}")
+
+            threshold = 0.5  # 可以自己調整
+            if val >= threshold:
+                st.success("判斷：**正相關**")
+            elif val <= -threshold:
+                st.error("判斷：**負相關**")
+            else:
+                st.info("判斷：**無明顯相關**")
     else:
         st.info("請先在「CSV 檔案分析」上傳並分析 CSV 檔案")
 
-with tab2:
-    st.header("Gemini 聊天機器人")
-    
-    genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel("models/gemini-1.5-flash")
-    chat = genai.ChatSession(model=model)
-    
-    user_input = st.text_input("請輸入問題")
-    if user_input:
-        response = chat.send_message(user_input)
-        st.write(response.text)
+
+
