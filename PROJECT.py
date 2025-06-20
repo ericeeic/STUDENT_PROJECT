@@ -1,31 +1,9 @@
 import streamlit as st
 import pandas as pd
 import chardet
-import seaborn as sns
-import matplotlib.pyplot as plt
+import plotly.express as px
 from sklearn.preprocessing import LabelEncoder
 import google.generativeai as genai
-import matplotlib
-from matplotlib import font_manager
-import os
-
-# 判斷系統平台，設定中文字型
-if os.name == 'nt':  # Windows
-    font_path = 'C:/Windows/Fonts/msjh.ttc'  # 微軟正黑體
-else:  # Linux / Mac
-    font_path = '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'  # Noto Sans CJK
-
-# 確認字型檔案是否存在
-if os.path.exists(font_path):
-    zh_font = font_manager.FontProperties(fname=font_path)
-    matplotlib.rcParams['font.family'] = zh_font.get_name()
-else:
-    print(f"⚠️ 找不到字型檔案: {font_path}，將使用預設字型")
-    zh_font = font_manager.FontProperties()  # 定義一個預設的 zh_font，避免 NameError
-
-
-
-
 
 
 API_KEY = "AIzaSyAP7BSVTOBJo2CDpincq7dAlTmDG4Ix5c0"
@@ -66,9 +44,7 @@ with tab1:
             corr = df.corr()
             st.session_state['corr'] = corr
             st.session_state['has_data'] = True
-            
-            
-            
+
 with tab2:
     st.header("Gemini 聊天機器人")
     
@@ -87,21 +63,19 @@ with tab3:
         corr = st.session_state['corr']
         st.write("相關係數矩陣")
         st.dataframe(corr)
+        
+        st.write("相關係數熱力圖 (Plotly)")
 
-        st.write("相關係數熱力圖")
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(
+        # 用 Plotly 畫熱力圖
+        fig = px.imshow(
             corr,
-            annot=True,
-            cmap='coolwarm',
-            vmin=-1,
-            vmax=1,
-            square=True,
-            linewidths=0.5,
-            ax=ax,
-            annot_kws={"fontproperties": zh_font}
+            text_auto=True,
+            color_continuous_scale='RdBu_r',
+            zmin=-1,
+            zmax=1,
+            aspect="auto"
         )
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         st.write("### 選擇兩個欄位來判斷相關關係")
         cols = corr.columns.tolist()
@@ -112,7 +86,7 @@ with tab3:
             val = corr.loc[col1, col2]
             st.write(f"{col1} 與 {col2} 的相關係數是：{val:.3f}")
 
-            threshold = 0.5  # 可以自己調整
+            threshold = 0.5
             if val >= threshold:
                 st.success("判斷：**正相關**")
             elif val <= -threshold:
@@ -121,6 +95,3 @@ with tab3:
                 st.info("判斷：**無明顯相關**")
     else:
         st.info("請先在「CSV 檔案分析」上傳並分析 CSV 檔案")
-
-
-
