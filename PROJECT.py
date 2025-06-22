@@ -85,7 +85,7 @@ with tab3:
 
         df = st.session_state['df_dict'][selected_file]
 
-        selected_col = st.selectbox("選擇欄位查看比例分佈", df.columns.tolist())
+        selected_col = st.selectbox("資料欄位統計:選擇欄位查看比例分佈", df.columns.tolist())
 
         value_counts = df[selected_col].value_counts(dropna=False)
         percentages = value_counts / value_counts.sum() * 100
@@ -115,7 +115,7 @@ with tab4:
 
     if st.session_state.get('has_data', False):
         file_options = list(st.session_state['corr_dict'].keys())
-        selected_file = st.selectbox("選擇要分析的檔案", file_options)
+        selected_file = st.selectbox("相關係數分析:選擇要分析的檔案", file_options)
 
         corr = st.session_state['corr_dict'][selected_file]
         df = st.session_state['df_dict'][selected_file]
