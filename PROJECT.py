@@ -80,18 +80,23 @@ with tab2:
 with tab3:
     st.header("資料欄位統計")
 
-    if st.session_state.get('has_data', False):
-        file_options = list(st.session_state['corr_dict'].keys())
-        selected_file = st.selectbox("選擇要統計的檔案", file_options)
+    # 有上傳檔案才處理
+    if uploaded_files:
+        file_options = [f.name for f in uploaded_files]
+        selected_file = st.selectbox("選擇要分析的檔案", file_options)
 
-        # 重新讀取該檔案
+        # 取得該檔案內容
         uploaded_file = next(f for f in uploaded_files if f.name == selected_file)
-        uploaded_file.seek(0)
-        df = pd.read_csv(uploaded_file, encoding=chardet.detect(uploaded_file.read())['encoding'])
-        uploaded_file.seek(0)
+        raw_bytes = uploaded_file.read()
+        encoding = chardet.detect(raw_bytes)['encoding']
 
+        import io
+        df = pd.read_csv(io.BytesIO(raw_bytes), encoding=encoding)
+
+        # 讓使用者選擇欄位
         selected_col = st.selectbox("選擇欄位查看比例分佈", df.columns.tolist())
 
+        # 類別型欄位統計
         value_counts = df[selected_col].value_counts(dropna=False)
         percentages = value_counts / value_counts.sum() * 100
 
@@ -103,16 +108,18 @@ with tab3:
 
         st.write(result_df)
 
+        # 畫圓餅圖
         fig = px.pie(
             result_df,
             names=selected_col,
             values='數量',
-            title=f"{selected_col} 各類別比例",
+            title=f"{selected_col} 分佈圓餅圖",
             hole=0.3
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("請先上傳並分析 CSV 檔案")
+        st.info("請先上傳 CSV 檔案")
+
 
 
 with tab4:
