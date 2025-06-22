@@ -28,7 +28,7 @@ if 'corr_dict' not in st.session_state:
 st.title("STREAMLIT作業")
 
 # 三個頁籤
-tab1, tab2, tab3 = st.tabs(["CSV 檔案分析", "Gemini 聊天", "相關係數分析"])
+tab1, tab2, tab3,tab4 = st.tabs(["CSV 檔案分析", "Gemini 聊天", "資料欄位統計","相關係數分析"])
 
 # ---- tab1: CSV 檔案分析 ----
 with tab1:
@@ -73,8 +73,50 @@ with tab2:
         response = chat.send_message(user_input)
         st.markdown(f"Gemini 回答: {response.text}")
 
-# ---- tab3: 相關係數分析 ----
+
+
+
+# ---- tab3: 資料欄位統計 ----
 with tab3:
+    st.header("資料欄位統計")
+
+    if st.session_state.get('has_data', False):
+        file_options = list(st.session_state['corr_dict'].keys())
+        selected_file = st.selectbox("選擇要統計的檔案", file_options)
+
+        # 重新讀取該檔案
+        uploaded_file = next(f for f in uploaded_files if f.name == selected_file)
+        uploaded_file.seek(0)
+        df = pd.read_csv(uploaded_file, encoding=chardet.detect(uploaded_file.read())['encoding'])
+        uploaded_file.seek(0)
+
+        selected_col = st.selectbox("選擇欄位查看比例分佈", df.columns.tolist())
+
+        value_counts = df[selected_col].value_counts(dropna=False)
+        percentages = value_counts / value_counts.sum() * 100
+
+        result_df = pd.DataFrame({
+            selected_col: value_counts.index,
+            '數量': value_counts.values,
+            '百分比 (%)': percentages.round(2)
+        })
+
+        st.write(result_df)
+
+        # ✅ 畫圓餅圖 Pie Chart
+        fig = px.pie(
+            result_df,
+            names=selected_col,
+            values='數量',
+            title=f"{selected_col} 各類別比例",
+            hole=0.3,  # 如果想要 donut 圓環圖，可改 0.4
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("請先上傳並分析 CSV 檔案")
+
+with tab4:
     st.header("相關係數分析")
     if st.session_state.get('has_data', False):
         file_options = list(st.session_state['corr_dict'].keys())
@@ -111,3 +153,4 @@ with tab3:
                 st.info("判斷：無明顯相關")
     else:
         st.info("請先上傳並分析 CSV 檔案")
+          
