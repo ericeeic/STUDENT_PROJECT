@@ -103,18 +103,17 @@ with tab3:
 
         st.write(result_df)
 
-        # ✅ 畫圓餅圖 Pie Chart
         fig = px.pie(
             result_df,
             names=selected_col,
             values='數量',
             title=f"{selected_col} 各類別比例",
-            hole=0.3,  # 如果想要 donut 圓環圖，可改 0.4
+            hole=0.3
         )
         st.plotly_chart(fig, use_container_width=True)
-
     else:
         st.info("請先上傳並分析 CSV 檔案")
+
 
 with tab4:
     st.header("相關係數分析")
