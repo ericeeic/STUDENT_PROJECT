@@ -6,6 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
+import io
 
 # 讀取 .env 檔案
 load_dotenv()
@@ -20,9 +21,13 @@ if not API_KEY:
 genai.configure(api_key=API_KEY)
 
 # 初始化 Session State
+if 'df_raw_dict' not in st.session_state:
+    st.session_state['df_raw_dict'] = {}
+if 'df_dict' not in st.session_state:
+    st.session_state['df_dict'] = {}
 if 'corr_dict' not in st.session_state:
     st.session_state['corr_dict'] = {}
-    st.session_state['df_dict'] = {}
+if 'has_data' not in st.session_state:
     st.session_state['has_data'] = False
 
 # App 標題
@@ -42,13 +47,16 @@ with tab1:
 
             raw_bytes = uploaded_file.read()
             encoding = chardet.detect(raw_bytes)['encoding']
-            import io
-            df = pd.read_csv(io.BytesIO(raw_bytes), encoding=encoding)
+            df_raw = pd.read_csv(io.BytesIO(raw_bytes), encoding=encoding)
 
-            st.write(f"資料筆數: {df.shape[0]} 筆，欄位數: {df.shape[1]} 欄")
-            st.dataframe(df, use_container_width=True)
+            st.write(f"資料筆數: {df_raw.shape[0]} 筆，欄位數: {df_raw.shape[1]} 欄")
+            st.dataframe(df_raw, use_container_width=True)
 
-            # LabelEncoder 轉換文字欄位
+            # 儲存原始資料
+            st.session_state['df_raw_dict'][uploaded_file.name] = df_raw
+
+            # 複製一份並 LabelEncoder 編碼
+            df = df_raw.copy()
             cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
             if cat_cols:
                 le = LabelEncoder()
@@ -58,7 +66,7 @@ with tab1:
                     except Exception as e:
                         st.warning(f"欄位 '{col}' 編碼失敗：{e}")
 
-            # 存 df / corr 進 session_state
+            # 儲存編碼後資料與相關係數
             st.session_state['df_dict'][uploaded_file.name] = df
             corr = df.corr()
             st.session_state['corr_dict'][uploaded_file.name] = corr
@@ -79,15 +87,15 @@ with tab2:
 with tab3:
     st.header("資料欄位統計")
 
-    if st.session_state.get('df_dict'):
-        file_options = list(st.session_state['df_dict'].keys())
+    if st.session_state.get('df_raw_dict'):
+        file_options = list(st.session_state['df_raw_dict'].keys())
         selected_file = st.selectbox("選擇要分析的檔案", file_options)
 
-        df = st.session_state['df_dict'][selected_file]
+        df_raw = st.session_state['df_raw_dict'][selected_file]
 
-        selected_col = st.selectbox("資料欄位統計:選擇欄位查看比例分佈", df.columns.tolist())
+        selected_col = st.selectbox("資料欄位統計:選擇欄位查看比例分佈", df_raw.columns.tolist())
 
-        value_counts = df[selected_col].value_counts(dropna=False)
+        value_counts = df_raw[selected_col].value_counts(dropna=False)
         percentages = value_counts / value_counts.sum() * 100
 
         result_df = pd.DataFrame({
@@ -118,7 +126,6 @@ with tab4:
         selected_file = st.selectbox("相關係數分析:選擇要分析的檔案", file_options)
 
         corr = st.session_state['corr_dict'][selected_file]
-        df = st.session_state['df_dict'][selected_file]
 
         st.write(f"檔案 {selected_file} 的相關係數矩陣")
         st.dataframe(corr, use_container_width=True)
