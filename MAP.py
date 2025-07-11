@@ -5,7 +5,7 @@ import json
 import pandas as pd
 
 st.set_page_config(layout="wide")
-st.title("台灣互動地圖｜點擊縣市與行政區")
+st.title("台灣地圖")
 
 # 縣市中心座標
 city_coords = {
