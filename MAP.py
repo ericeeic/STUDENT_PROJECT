@@ -142,45 +142,6 @@ if page == "不動產分析":
             st.write(f"共 {len(filtered_df)} 筆資料")
             st.dataframe(filtered_df)
             
-            # 交易筆數比例分布圖
-            st.markdown("## 📊 交易筆數分布")
-            
-            if not st.session_state.selected_city:
-                # 沒選縣市 - 顯示各縣市比例
-                city_data = combined_df.groupby('縣市')['交易筆數'].sum().reset_index()
-                chart_data = [{"name": row['縣市'], "value": row['交易筆數']} 
-                             for _, row in city_data.iterrows()]
-                chart_title = "各縣市交易筆數分布"
-                
-            elif not st.session_state.selected_district:
-                # 選了縣市但沒選行政區 - 顯示該縣市各行政區比例
-                district_data = filtered_df.groupby('行政區')['交易筆數'].sum().reset_index()
-                chart_data = [{"name": row['行政區'], "value": row['交易筆數']} 
-                             for _, row in district_data.iterrows()]
-                chart_title = f"{st.session_state.selected_city} 各行政區交易筆數分布"
-                
-            else:
-                # 選了行政區 - 100%顯示該行政區
-                total_transactions = filtered_df['交易筆數'].sum()
-                chart_data = [{"name": st.session_state.selected_district, "value": total_transactions}]
-                chart_title = f"{st.session_state.selected_district} 交易筆數"
-            
-            pie_options = {
-                "title": {"text": chart_title, "left": "center"},
-                "tooltip": {"trigger": "item"},
-                "series": [
-                    {
-                        "name": "交易筆數",
-                        "type": "pie",
-                        "radius": "70%",
-                        "data": chart_data,
-                        "emphasis": {"itemStyle": {"shadowBlur": 10, "shadowOffsetX": 0, "shadowColor": "rgba(0, 0, 0, 0.5)"}},
-                        "label": {"show": True, "formatter": "{b}: {c} ({d}%)"}
-                    }
-                ]
-            }
-            
-            st_echarts(options=pie_options, height="400px")
 # ==== Gemini 聊天室頁 ====
 elif page == "Gemini 聊天室":
     st.set_page_config(page_title="Gemini 聊天室", layout="wide")
