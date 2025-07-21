@@ -3,9 +3,10 @@ import folium
 from streamlit_folium import st_folium
 import json
 import pandas as pd
+import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
-st.title("台灣地圖")
+st.title("台灣地圖與不動產資料分析")
 
 # 縣市中心座標
 city_coords = {
@@ -33,7 +34,6 @@ city_coords = {
 # 載入行政區座標
 with open("district_coords.json", "r", encoding="utf-8") as f:
     district_coords = json.load(f)
-
 
 # 初始化 session_state
 if "selected_city" not in st.session_state:
@@ -72,32 +72,41 @@ def create_map(selected_city=None, selected_district=None):
 
     return m
 
-# 上傳 CSV 檔案
-uploaded_file = st.file_uploader("上傳 CSV 檔案", type=["csv"])
-data_df = None
-if uploaded_file:
-    data_df = pd.read_csv(uploaded_file)
-    st.success(f"已成功讀取 CSV 檔案，資料列數：{len(data_df)}")
+# 讀取多個 CSV 並合併
+file_names = [
+    "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
+    "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
+    "合併後不動產統計_11301.csv", "合併後不動產統計_11302.csv", "合併後不動產統計_11303.csv", "合併後不動產統計_11304.csv",
+    "合併後不動產統計_11401.csv", "合併後不動產統計_11402.csv"
+]
 
+dfs = [pd.read_csv(name) for name in file_names]
+combined_df = pd.concat(dfs, ignore_index=True)
+
+# 顯示欄位名稱，方便除錯
+st.write("資料欄位：", combined_df.columns.tolist())
+
+# 定義函式取得季度 (假設有年月欄位叫 '年月' 並為民國年 + 月格式，ex: 11103 表示111年3月)
+def get_quarter(ym):
+    try:
+        ym_str = str(int(ym))
+        if len(ym_str) < 4:
+            return None
+        year = int(ym_str[:3])
+        month = int(ym_str[3:])  # 後兩碼是月份
+        quarter = (month - 1) // 3 + 1
+        return f"{year}Q{quarter}"
+    except:
+        return None
+
+# 確認你的年月欄名稱，這邊假設叫 "年月"
+if "年月" in combined_df.columns:
+    combined_df['季度'] = combined_df['年月'].apply(get_quarter)
+else:
+    st.warning("找不到 '年月' 欄位，請確認你的資料欄位名稱並修改程式。")
+
+# 右側縣市與行政區選擇 UI
 col1, col2 = st.columns([3, 1])
-
-with col1:
-    map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
-    st_folium(map_data, width=800, height=600)
-
-    # 顯示資料表格
-    st.markdown("### 資料表")
-    if data_df is not None:
-        # 根據選擇過濾資料
-        df_filtered = data_df.copy()
-        if st.session_state.selected_city:
-            df_filtered = df_filtered[df_filtered["city"] == st.session_state.selected_city]
-        if st.session_state.selected_district:
-            df_filtered = df_filtered[df_filtered["district"] == st.session_state.selected_district]
-
-        st.dataframe(df_filtered)
-    else:
-        st.info("請先上傳 CSV 檔案")
 
 with col2:
     st.write("### 縣市選擇")
@@ -108,7 +117,7 @@ with col2:
         for idx, city in enumerate(cities[i:i + cities_per_row]):
             if cols[idx].button(city):
                 st.session_state.selected_city = city
-                st.session_state.selected_district = None  # 清除行政區選擇
+                st.session_state.selected_district = None
 
     if st.session_state.selected_city:
         st.subheader(f"行政區：{st.session_state.selected_city}")
@@ -128,70 +137,55 @@ with col2:
     else:
         st.info("請從右側選擇縣市查看行政區")
 
-file_names = [
-    "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
-    "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
-    "合併後不動產統計_11301.csv", "合併後不動產統計_11302.csv", "合併後不動產統計_11303.csv", "合併後不動產統計_11304.csv",
-    "合併後不動產統計_11401.csv", "合併後不動產統計_11402.csv"
-]
+with col1:
+    # 顯示地圖
+    map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
+    st_folium(map_data, width=800, height=600)
 
-dfs = [pd.read_csv(name) for name in file_names]
-combined_df = pd.concat(dfs, ignore_index=True)
+    # 篩選資料
+    filtered_df = combined_df.copy()
+    if st.session_state.selected_city:
+        filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
+    if st.session_state.selected_district:
+        filtered_df = filtered_df[filtered_df["行政區"] == st.session_state.selected_district]
 
-# 根據選擇進行篩選
-filtered_df = combined_df.copy()
-if st.session_state.selected_city:
-    filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
-if st.session_state.selected_district:
-    filtered_df = filtered_df[filtered_df["行政區"] == st.session_state.selected_district]
+    st.markdown("## 📊 篩選後的不動產資料")
+    st.write(f"共 {len(filtered_df)} 筆資料")
+    st.dataframe(filtered_df)
 
-st.markdown("## 📊 篩選後的不動產資料")
-st.write(f"共 {len(filtered_df)} 筆資料")
-st.dataframe(filtered_df)
+    # 繪製折線圖分析
+    st.markdown("## 折線圖分析")
 
-
-
-def get_quarter(ym):
-    try:
-        ym_str = str(int(ym))
-        if len(ym_str) < 5:
-            return None
-        year = int(ym_str[:3])
-        month = int(ym_str[3:5])
-        quarter = (month - 1) // 3 + 1
-        return f"{year}Q{quarter}"
-    except:
-        return None
-
-combined_df['quarter'] = combined_df['ym'].apply(get_quarter)
-
-st.markdown("## 折線圖分析")
-
-# 綜合季度：BUILD vs 交易筆數總和
-agg_total = combined_df.groupby('BUILD')['交易筆數'].sum().reset_index()
-
-fig, ax = plt.subplots()
-ax.plot(agg_total['BUILD'], agg_total['交易筆數'], marker='o')
-ax.set_title("不同 BUILD 類別交易筆數總和")
-ax.set_xlabel("BUILD")
-ax.set_ylabel("交易筆數")
-plt.xticks(rotation=45)
-st.pyplot(fig)
-
-# 分季度折線圖
-quarters = combined_df['季度'].dropna().unique()
-quarters = sorted(quarters)
-
-with st.expander("各季度 BUILD vs 交易筆數折線圖"):
-    for q in quarters:
-        df_q = combined_df[combined_df['季度'] == q]
-        agg_q = df_q.groupby('BUILD')['交易筆數'].sum().reset_index()
+    # 總和：BUILD vs 交易筆數總和
+    if 'BUILD' in combined_df.columns and '交易筆數' in combined_df.columns:
+        agg_total = combined_df.groupby('BUILD')['交易筆數'].sum().reset_index()
 
         fig, ax = plt.subplots()
-        ax.plot(agg_q['BUILD'], agg_q['交易筆數'], marker='o')
-        ax.set_title(f"{q} BUILD 類別交易筆數")
+        ax.plot(agg_total['BUILD'], agg_total['交易筆數'], marker='o')
+        ax.set_title("不同 BUILD 類別交易筆數總和")
         ax.set_xlabel("BUILD")
         ax.set_ylabel("交易筆數")
         plt.xticks(rotation=45)
         st.pyplot(fig)
+    else:
+        st.warning("資料中缺少 'BUILD' 或 '交易筆數' 欄位，無法繪製總和折線圖。")
 
+    # 分季度折線圖
+    if '季度' in combined_df.columns and 'BUILD' in combined_df.columns and '交易筆數' in combined_df.columns:
+        quarters = combined_df['季度'].dropna().unique()
+        quarters = sorted(quarters)
+
+        with st.expander("各季度 BUILD vs 交易筆數折線圖"):
+            for q in quarters:
+                df_q = combined_df[combined_df['季度'] == q]
+                agg_q = df_q.groupby('BUILD')['交易筆數'].sum().reset_index()
+
+                fig, ax = plt.subplots()
+                ax.plot(agg_q['BUILD'], agg_q['交易筆數'], marker='o')
+                ax.set_title(f"{q} BUILD 類別交易筆數")
+                ax.set_xlabel("BUILD")
+                ax.set_ylabel("交易筆數")
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
+    else:
+        st.warning("資料中缺少 '季度'、'BUILD' 或 '交易筆數' 欄位，無法繪製分季度折線圖。")
