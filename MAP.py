@@ -148,3 +148,49 @@ if st.session_state.selected_district:
 st.markdown("## 📊 篩選後的不動產資料")
 st.write(f"共 {len(filtered_df)} 筆資料")
 st.dataframe(filtered_df)
+
+
+
+def get_quarter(ym):
+    try:
+        ym_str = str(int(ym))
+        if len(ym_str) < 5:
+            return None
+        year = int(ym_str[:3])
+        month = int(ym_str[3:5])
+        quarter = (month - 1) // 3 + 1
+        return f"{year}Q{quarter}"
+    except:
+        return None
+
+combined_df['quarter'] = combined_df['ym'].apply(get_quarter)
+
+st.markdown("## 折線圖分析")
+
+# 綜合季度：BUILD vs 交易筆數總和
+agg_total = combined_df.groupby('BUILD')['transaction_count'].sum().reset_index()
+
+fig, ax = plt.subplots()
+ax.plot(agg_total['BUILD'], agg_total['transaction_count'], marker='o')
+ax.set_title("不同 BUILD 類別交易筆數總和")
+ax.set_xlabel("BUILD")
+ax.set_ylabel("交易筆數")
+plt.xticks(rotation=45)
+st.pyplot(fig)
+
+# 分季度折線圖
+quarters = combined_df['quarter'].dropna().unique()
+quarters = sorted(quarters)
+
+with st.expander("各季度 BUILD vs 交易筆數折線圖"):
+    for q in quarters:
+        df_q = combined_df[combined_df['quarter'] == q]
+        agg_q = df_q.groupby('BUILD')['transaction_count'].sum().reset_index()
+
+        fig, ax = plt.subplots()
+        ax.plot(agg_q['BUILD'], agg_q['transaction_count'], marker='o')
+        ax.set_title(f"{q} BUILD 類別交易筆數")
+        ax.set_xlabel("BUILD")
+        ax.set_ylabel("交易筆數")
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
