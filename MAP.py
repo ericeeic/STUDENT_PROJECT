@@ -72,7 +72,32 @@ def create_map(selected_city=None, selected_district=None):
 
     return m
 
+# 上傳 CSV 檔案
+uploaded_file = st.file_uploader("上傳 CSV 檔案", type=["csv"])
+data_df = None
+if uploaded_file:
+    data_df = pd.read_csv(uploaded_file)
+    st.success(f"已成功讀取 CSV 檔案，資料列數：{len(data_df)}")
 
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
+    st_folium(map_data, width=800, height=600)
+
+    # 顯示資料表格
+    st.markdown("### 資料表")
+    if data_df is not None:
+        # 根據選擇過濾資料
+        df_filtered = data_df.copy()
+        if st.session_state.selected_city:
+            df_filtered = df_filtered[df_filtered["city"] == st.session_state.selected_city]
+        if st.session_state.selected_district:
+            df_filtered = df_filtered[df_filtered["district"] == st.session_state.selected_district]
+
+        st.dataframe(df_filtered)
+    else:
+        st.info("請先上傳 CSV 檔案")
 
 with col2:
     st.write("### 縣市選擇")
