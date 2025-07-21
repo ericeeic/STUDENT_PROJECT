@@ -106,13 +106,13 @@ if page == "不動產分析":
             st.subheader(f"行政區：{st.session_state.selected_city}")
             districts = district_coords.get(st.session_state.selected_city, {})
             district_names = list(districts.keys())
-            district_names = ["全部"] + list(districts.keys())
+            district_names = ["全部的"] + list(districts.keys())
             districts_per_row = 3
             for i in range(0, len(district_names), districts_per_row):
                 row = st.columns(districts_per_row)
                 for j, name in enumerate(district_names[i:i + districts_per_row]):
                     if row[j].button(name):
-                        if name == "全部":
+                        if name == "全部的":
                             st.session_state.selected_district = None
                         else:
                             st.session_state.selected_district = name
