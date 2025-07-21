@@ -138,5 +138,13 @@ file_names = [
 dfs = [pd.read_csv(name) for name in file_names]
 combined_df = pd.concat(dfs, ignore_index=True)
 
-st.title("合併後的不動產統計資料")
-st.dataframe(combined_df)     
+# 根據選擇進行篩選
+filtered_df = combined_df.copy()
+if st.session_state.selected_city:
+    filtered_df = filtered_df[filtered_df["city"] == st.session_state.selected_city]
+if st.session_state.selected_district:
+    filtered_df = filtered_df[filtered_df["district"] == st.session_state.selected_district]
+
+st.markdown("## 📊 篩選後的不動產資料")
+st.write(f"共 {len(filtered_df)} 筆資料")
+st.dataframe(filtered_df)
