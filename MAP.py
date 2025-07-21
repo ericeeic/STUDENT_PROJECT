@@ -129,7 +129,6 @@ with col2:
         st.info("請從右側選擇縣市查看行政區")
 
 
-
 file_names = [
     "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
     "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
@@ -137,8 +136,12 @@ file_names = [
     "合併後不動產統計_11401.csv", "合併後不動產統計_11402.csv"
 ]
 
-dfs = [pd.read_csv(name) for name in file_names]
-combined_df = pd.concat(dfs, ignore_index=True)
-
-st.title("合併後的不動產統計資料")
-st.dataframe(combined_df)
+# 依序讀取並顯示每個檔案
+for fname in file_names:
+    file_url = base_url + fname
+    try:
+        df = pd.read_csv(file_url)
+        with st.expander(f"📁 {fname}（點擊展開）"):
+            st.dataframe(df)
+    except Exception as e:
+        st.error(f"讀取 {fname} 時發生錯誤：{e}")
