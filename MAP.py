@@ -4,11 +4,6 @@ from streamlit_folium import st_folium
 import json
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
-
-# 設定 matplotlib 中文字型，避免中文字變成方塊
-rcParams['font.sans-serif'] = ['Microsoft JhengHei']  # Windows 微軟正黑體
-rcParams['axes.unicode_minus'] = False  # 正確顯示負號
 
 st.set_page_config(layout="wide")
 st.title("台灣地圖與不動產資料分析")
@@ -88,7 +83,7 @@ file_names = [
 dfs = [pd.read_csv(name) for name in file_names]
 combined_df = pd.concat(dfs, ignore_index=True)
 
-# 定義函式取得季度 (假設年月格式為民國年+月份，如 11103)
+# 中文季度轉換函式
 def get_quarter(ym):
     try:
         ym_str = str(int(ym))
@@ -97,7 +92,7 @@ def get_quarter(ym):
         year = int(ym_str[:3])
         month = int(ym_str[3:])
         quarter = (month - 1) // 3 + 1
-        return f"{year}Q{quarter}"
+        return f"{year}年第{quarter}季"
     except:
         return None
 
@@ -138,11 +133,9 @@ with col2:
         st.info("請從右側選擇縣市查看行政區")
 
 with col1:
-    # 顯示地圖
     map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
     st_folium(map_data, width=800, height=600)
 
-    # 篩選資料
     filtered_df = combined_df.copy()
     if st.session_state.selected_city:
         filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
@@ -153,22 +146,21 @@ with col1:
     st.write(f"共 {len(filtered_df)} 筆資料")
     st.dataframe(filtered_df)
 
-    # 繪製折線圖分析
-    st.markdown("## 折線圖分析")
-
+    # 繪製折線圖
     if 'BUILD' in filtered_df.columns and '交易筆數' in filtered_df.columns and '季度' in filtered_df.columns:
-        # 總和折線圖：所有季度交易筆數加總（以 BUILD 分類）
-        agg_total = filtered_df.groupby('BUILD')['交易筆數'].sum().reset_index()
+        st.markdown("## 折線圖分析")
 
+        # 全部季度合計折線圖
+        agg_total = filtered_df.groupby('BUILD')['交易筆數'].sum().reset_index()
         fig, ax = plt.subplots()
         ax.plot(agg_total['BUILD'], agg_total['交易筆數'], marker='o')
-        ax.set_title("全部季度 - BUILD 類別交易筆數總和")
+        ax.set_title("全部季度 BUILD 類別交易筆數總和")
         ax.set_xlabel("BUILD")
         ax.set_ylabel("交易筆數")
         plt.xticks(rotation=45)
         st.pyplot(fig)
 
-        # 各季度分別折線圖
+        # 分季度折線圖
         quarters = filtered_df['季度'].dropna().unique()
         quarters = sorted(quarters)
 
@@ -185,4 +177,4 @@ with col1:
                 plt.xticks(rotation=45)
                 st.pyplot(fig)
     else:
-        st.warning("資料中缺少 'BUILD'、'交易筆數' 或 '季度' 欄位，無法繪製折線圖。")
+        st.info("缺少必要欄位 ('BUILD', '交易筆數', '季度')，無法繪製折線圖。")
