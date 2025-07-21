@@ -3,7 +3,6 @@ import folium
 from streamlit_folium import st_folium
 import json
 import pandas as pd
-import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 st.title("台灣地圖與不動產資料分析")
@@ -145,36 +144,3 @@ with col1:
     st.markdown("## 📊 篩選後的不動產資料")
     st.write(f"共 {len(filtered_df)} 筆資料")
     st.dataframe(filtered_df)
-
-    # 繪製折線圖
-    if 'BUILD' in filtered_df.columns and '交易筆數' in filtered_df.columns and '季度' in filtered_df.columns:
-        st.markdown("## 折線圖分析")
-
-        # 全部季度合計折線圖
-        agg_total = filtered_df.groupby('BUILD')['交易筆數'].sum().reset_index()
-        fig, ax = plt.subplots()
-        ax.plot(agg_total['BUILD'], agg_total['交易筆數'], marker='o')
-        ax.set_title("全部季度 BUILD 類別交易筆數總和")
-        ax.set_xlabel("BUILD")
-        ax.set_ylabel("交易筆數")
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-        # 分季度折線圖
-        quarters = filtered_df['季度'].dropna().unique()
-        quarters = sorted(quarters)
-
-        with st.expander("各季度 BUILD vs 交易筆數折線圖"):
-            for q in quarters:
-                df_q = filtered_df[filtered_df['季度'] == q]
-                agg_q = df_q.groupby('BUILD')['交易筆數'].sum().reset_index()
-
-                fig, ax = plt.subplots()
-                ax.plot(agg_q['BUILD'], agg_q['交易筆數'], marker='o')
-                ax.set_title(f"{q} BUILD 類別交易筆數")
-                ax.set_xlabel("BUILD")
-                ax.set_ylabel("交易筆數")
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
-    else:
-        st.info("缺少必要欄位 ('BUILD', '交易筆數', '季度')，無法繪製折線圖。")
