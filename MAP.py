@@ -140,7 +140,7 @@ if page == "不動產分析":
             
             st.markdown("## 📊 篩選後的不動產資料")
             st.write(f"共 {len(filtered_df)} 筆資料")
-            
+            st.dataframe(filtered_df)
             # 準備折線圖資料
             if len(filtered_df) > 0:
                 # 提取年份並按建物類型分組計算平均單價
@@ -195,7 +195,7 @@ if page == "不動產分析":
                 
                 st_echarts(options=options, height="400px")
             
-            st.dataframe(filtered_df)
+            
             
 # ==== Gemini 聊天室頁 ====
 elif page == "Gemini 聊天室":
