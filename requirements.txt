@@ -9,4 +9,3 @@ plotly
 python-dotenv
 folium
 streamlit-folium
-streamlit-echarts
