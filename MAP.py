@@ -10,10 +10,12 @@ import google.generativeai as genai
 page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"])
 
 # ==== 不動產分析頁 ====
+# ==== 不動產分析頁 ====
 if page == "不動產分析":
     st.set_page_config(page_title="台灣不動產分析", layout="wide")
     st.title("台灣地圖與不動產資料分析")
-    
+
+    # 縣市與行政區座標
     city_coords = {
         "台北市": [25.0330, 121.5654],
         "新北市": [25.0169, 121.4628],
@@ -36,7 +38,6 @@ if page == "不動產分析":
         "台東縣": [22.7583, 121.1500],
     }
 
-    # 載入行政區座標
     with open("district_coords.json", "r", encoding="utf-8") as f:
         district_coords = json.load(f)
 
@@ -45,6 +46,8 @@ if page == "不動產分析":
         st.session_state.selected_city = None
     if "selected_district" not in st.session_state:
         st.session_state.selected_district = None
+    if "show_filtered_data" not in st.session_state:
+        st.session_state.show_filtered_data = False
 
     def create_map(selected_city=None, selected_district=None):
         if selected_city and selected_district and selected_district in district_coords.get(selected_city, {}):
@@ -56,7 +59,6 @@ if page == "不動產分析":
 
         m = folium.Map(location=zoom_loc, zoom_start=zoom_level)
 
-        # 縣市標記
         for city, coord in city_coords.items():
             folium.Marker(
                 location=coord,
@@ -65,7 +67,6 @@ if page == "不動產分析":
                 icon=folium.Icon(color="red" if city == selected_city else "blue", icon="info-sign"),
             ).add_to(m)
 
-        # 行政區標記
         if selected_city and selected_city in district_coords:
             for district, coord in district_coords[selected_city].items():
                 color = "orange" if district == selected_district else "green"
@@ -77,7 +78,7 @@ if page == "不動產分析":
 
         return m
 
-    # 讀取多個 CSV 並合併
+    # 合併不動產 CSV
     file_names = [
         "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
         "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
@@ -86,8 +87,6 @@ if page == "不動產分析":
     ]
     dfs = [pd.read_csv(name) for name in file_names]
     combined_df = pd.concat(dfs, ignore_index=True)
-
-    # 中文季度轉換函式
 
     col1, col2 = st.columns([3, 1])
 
@@ -101,6 +100,7 @@ if page == "不動產分析":
                 if cols[idx].button(city):
                     st.session_state.selected_city = city
                     st.session_state.selected_district = None
+                    st.session_state.show_filtered_data = True  # 顯示資料
 
         if st.session_state.selected_city:
             st.subheader(f"行政區：{st.session_state.selected_city}")
@@ -112,11 +112,13 @@ if page == "不動產分析":
                 for j, name in enumerate(district_names[i:i + districts_per_row]):
                     if row[j].button(name):
                         st.session_state.selected_district = name
+                        st.session_state.show_filtered_data = True  # 顯示資料
 
             st.divider()
             if st.button("回到全台灣"):
                 st.session_state.selected_city = None
                 st.session_state.selected_district = None
+                st.session_state.show_filtered_data = False  # 隱藏資料
         else:
             st.info("請從右側選擇縣市查看行政區")
 
@@ -124,15 +126,16 @@ if page == "不動產分析":
         map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
         st_folium(map_data, width=800, height=600)
 
-        filtered_df = combined_df.copy()
-        if st.session_state.selected_city:
-            filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
-        if st.session_state.selected_district:
-            filtered_df = filtered_df[filtered_df["行政區"] == st.session_state.selected_district]
+        if st.session_state.show_filtered_data:
+            filtered_df = combined_df.copy()
+            if st.session_state.selected_city:
+                filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
+            if st.session_state.selected_district:
+                filtered_df = filtered_df[filtered_df["行政區"] == st.session_state.selected_district]
 
-        st.markdown("## 📊 篩選後的不動產資料")
-        st.write(f"共 {len(filtered_df)} 筆資料")
-        st.dataframe(filtered_df)
+            st.markdown("## 📊 篩選後的不動產資料")
+            st.write(f"共 {len(filtered_df)} 筆資料")
+            st.dataframe(filtered_df)
 
 # ==== Gemini 聊天室頁 ====
 elif page == "Gemini 聊天室":
