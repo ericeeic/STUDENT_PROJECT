@@ -130,18 +130,15 @@ with col2:
 
 
 
-df1 = pd.read_csv("合併後不動產統計_11101.csv") 
-df2 = pd.read_csv("合併後不動產統計_11102.csv") 
-df3 = pd.read_csv("合併後不動產統計_11103.csv") 
-df4 = pd.read_csv("合併後不動產統計_11104.csv") 
-df5 = pd.read_csv("合併後不動產統計_11201.csv") 
-df6 = pd.read_csv("合併後不動產統計_11202.csv") 
-df7 = pd.read_csv("合併後不動產統計_11203.csv") 
-df8 = pd.read_csv("合併後不動產統計_11204.csv") 
-df9 = pd.read_csv("合併後不動產統計_11301.csv") 
-df10 = pd.read_csv("合併後不動產統計_11302.csv") 
-df11 = pd.read_csv("合併後不動產統計_11303.csv") 
-df12 = pd.read_csv("合併後不動產統計_11304.csv") 
-df13 = pd.read_csv("合併後不動產統計_11401.csv") 
-df14 = pd.read_csv("合併後不動產統計_11402.csv") 
-st.dataframe(df1,df2,df3.df,4df,5,df6,df7,df8,df9,df10,df11,df12,df13,df14)
+file_names = [
+    "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
+    "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
+    "合併後不動產統計_11301.csv", "合併後不動產統計_11302.csv", "合併後不動產統計_11303.csv", "合併後不動產統計_11304.csv",
+    "合併後不動產統計_11401.csv", "合併後不動產統計_11402.csv"
+]
+
+dfs = [pd.read_csv(name) for name in file_names]
+combined_df = pd.concat(dfs, ignore_index=True)
+
+st.title("合併後的不動產統計資料")
+st.dataframe(combined_df)
