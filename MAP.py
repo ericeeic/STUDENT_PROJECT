@@ -128,7 +128,7 @@ with col2:
     else:
         st.info("請從右側選擇縣市查看行政區")
 
-
+base_url = "https://raw.githubusercontent.com/ericeeic/STUDENT_PROJECT/main/data/"
 file_names = [
     "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
     "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
