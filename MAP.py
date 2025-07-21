@@ -140,6 +140,61 @@ if page == "不動產分析":
             
             st.markdown("## 📊 篩選後的不動產資料")
             st.write(f"共 {len(filtered_df)} 筆資料")
+            
+            # 準備折線圖資料
+            if len(filtered_df) > 0:
+                # 提取年份並按建物類型分組計算平均單價
+                filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911  # 民國轉西元
+                yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
+                
+                # 取得所有年份
+                years = sorted(yearly_avg['年份'].unique())
+                year_labels = [str(year) for year in years]
+                
+                # 分別取得新成屋與中古屋的資料
+                new_house_data = []
+                old_house_data = []
+                
+                for year in years:
+                    new_house_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺']
+                    old_house_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
+                    
+                    new_house_data.append(int(new_house_avg.iloc[0]) if len(new_house_avg) > 0 else 0)
+                    old_house_data.append(int(old_house_avg.iloc[0]) if len(old_house_avg) > 0 else 0)
+                
+                # ECharts 配置
+                options = {
+                    "title": {"text": "不動產價格趨勢分析"},
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["新成屋", "中古屋"]},
+                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+                    "toolbox": {"feature": {"saveAsImage": {}}},
+                    "xAxis": {
+                        "type": "category",
+                        "boundaryGap": False,
+                        "data": year_labels,
+                    },
+                    "yAxis": {"type": "value", "name": "平均單價(元/平方公尺)"},
+                    "series": [
+                        {
+                            "name": "新成屋",
+                            "type": "line",
+                            "data": new_house_data,
+                            "lineStyle": {"color": "#ff7f0e"},
+                            "itemStyle": {"color": "#ff7f0e"}
+                        },
+                        {
+                            "name": "中古屋",
+                            "type": "line", 
+                            "data": old_house_data,
+                            "lineStyle": {"color": "#1f77b4"},
+                            "itemStyle": {"color": "#1f77b4"}
+                        },
+                    ],
+                }
+                
+                st_echarts(options=options, height="400px")
+            
             st.dataframe(filtered_df)
             
 # ==== Gemini 聊天室頁 ====
