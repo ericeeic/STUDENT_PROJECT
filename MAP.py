@@ -83,22 +83,7 @@ dfs = [pd.read_csv(name) for name in file_names]
 combined_df = pd.concat(dfs, ignore_index=True)
 
 # 中文季度轉換函式
-def get_quarter(ym):
-    try:
-        ym_str = str(int(ym))
-        if len(ym_str) < 4:
-            return None
-        year = int(ym_str[:3])
-        month = int(ym_str[3:])
-        quarter = (month - 1) // 3 + 1
-        return f"{year}年第{quarter}季"
-    except:
-        return None
 
-if "年月" in combined_df.columns:
-    combined_df['季度'] = combined_df['年月'].apply(get_quarter)
-else:
-    st.warning("找不到 '年月' 欄位，請確認資料欄位名稱。")
 
 col1, col2 = st.columns([3, 1])
 
