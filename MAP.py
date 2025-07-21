@@ -141,9 +141,9 @@ combined_df = pd.concat(dfs, ignore_index=True)
 # 根據選擇進行篩選
 filtered_df = combined_df.copy()
 if st.session_state.selected_city:
-    filtered_df = filtered_df[filtered_df["city"] == st.session_state.selected_city]
+    filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
 if st.session_state.selected_district:
-    filtered_df = filtered_df[filtered_df["district"] == st.session_state.selected_district]
+    filtered_df = filtered_df[filtered_df["行政區域"] == st.session_state.selected_district]
 
 st.markdown("## 📊 篩選後的不動產資料")
 st.write(f"共 {len(filtered_df)} 筆資料")
