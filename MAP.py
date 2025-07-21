@@ -83,29 +83,23 @@ file_names = [
 dfs = [pd.read_csv(name) for name in file_names]
 combined_df = pd.concat(dfs, ignore_index=True)
 
-# 顯示欄位名稱，方便除錯
-st.write("資料欄位：", combined_df.columns.tolist())
-
-# 定義函式取得季度 (假設有年月欄位叫 '年月' 並為民國年 + 月格式，ex: 11103 表示111年3月)
 def get_quarter(ym):
     try:
         ym_str = str(int(ym))
         if len(ym_str) < 4:
             return None
         year = int(ym_str[:3])
-        month = int(ym_str[3:])  # 後兩碼是月份
+        month = int(ym_str[3:])
         quarter = (month - 1) // 3 + 1
         return f"{year}Q{quarter}"
     except:
         return None
 
-# 確認你的年月欄名稱，這邊假設叫 "年月"
 if "年月" in combined_df.columns:
     combined_df['季度'] = combined_df['年月'].apply(get_quarter)
 else:
-    st.warning("找不到 '年月' 欄位，請確認你的資料欄位名稱並修改程式。")
+    st.warning("找不到 '年月' 欄位，請確認資料。")
 
-# 右側縣市與行政區選擇 UI
 col1, col2 = st.columns([3, 1])
 
 with col2:
@@ -138,7 +132,6 @@ with col2:
         st.info("請從右側選擇縣市查看行政區")
 
 with col1:
-    # 顯示地圖
     map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
     st_folium(map_data, width=800, height=600)
 
@@ -153,39 +146,36 @@ with col1:
     st.write(f"共 {len(filtered_df)} 筆資料")
     st.dataframe(filtered_df)
 
-    # 繪製折線圖分析
-    st.markdown("## 折線圖分析")
+    # 按鈕觸發折線圖分析
+    if st.button("執行交易筆數分析"):
+        st.markdown("## 折線圖分析")
 
-    # 總和：BUILD vs 交易筆數總和
-    if 'BUILD' in combined_df.columns and '交易筆數' in combined_df.columns:
-        agg_total = combined_df.groupby('BUILD')['交易筆數'].sum().reset_index()
+        # 全部季度合併
+        if {'季度', 'BUILD', '交易筆數'}.issubset(filtered_df.columns):
+            agg_all = filtered_df.groupby(['BUILD', '季度'])['交易筆數'].sum().reset_index()
+            agg_total = filtered_df.groupby('BUILD')['交易筆數'].sum().reset_index()
 
-        fig, ax = plt.subplots()
-        ax.plot(agg_total['BUILD'], agg_total['交易筆數'], marker='o')
-        ax.set_title("不同 BUILD 類別交易筆數總和")
-        ax.set_xlabel("BUILD")
-        ax.set_ylabel("交易筆數")
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-    else:
-        st.warning("資料中缺少 'BUILD' 或 '交易筆數' 欄位，無法繪製總和折線圖。")
+            # 繪製全部季度合併折線圖 (BUILD vs 交易筆數總和)
+            fig, ax = plt.subplots()
+            ax.plot(agg_total['BUILD'], agg_total['交易筆數'], marker='o')
+            ax.set_title("不同 BUILD 類別交易筆數總和")
+            ax.set_xlabel("BUILD")
+            ax.set_ylabel("交易筆數")
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
 
-    # 分季度折線圖
-    if '季度' in combined_df.columns and 'BUILD' in combined_df.columns and '交易筆數' in combined_df.columns:
-        quarters = combined_df['季度'].dropna().unique()
-        quarters = sorted(quarters)
-
-        with st.expander("各季度 BUILD vs 交易筆數折線圖"):
-            for q in quarters:
-                df_q = combined_df[combined_df['季度'] == q]
-                agg_q = df_q.groupby('BUILD')['交易筆數'].sum().reset_index()
-
-                fig, ax = plt.subplots()
-                ax.plot(agg_q['BUILD'], agg_q['交易筆數'], marker='o')
-                ax.set_title(f"{q} BUILD 類別交易筆數")
-                ax.set_xlabel("BUILD")
-                ax.set_ylabel("交易筆數")
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
-    else:
-        st.warning("資料中缺少 '季度'、'BUILD' 或 '交易筆數' 欄位，無法繪製分季度折線圖。")
+            # 各季度折線圖
+            quarters = sorted(filtered_df['季度'].dropna().unique())
+            with st.expander("各季度 BUILD vs 交易筆數折線圖"):
+                for q in quarters:
+                    df_q = filtered_df[filtered_df['季度'] == q]
+                    agg_q = df_q.groupby('BUILD')['交易筆數'].sum().reset_index()
+                    fig, ax = plt.subplots()
+                    ax.plot(agg_q['BUILD'], agg_q['交易筆數'], marker='o')
+                    ax.set_title(f"{q} BUILD 類別交易筆數")
+                    ax.set_xlabel("BUILD")
+                    ax.set_ylabel("交易筆數")
+                    plt.xticks(rotation=45)
+                    st.pyplot(fig)
+        else:
+            st.warning("篩選後資料缺少必要欄位（季度、BUILD、交易筆數），無法進行分析。")
