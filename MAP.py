@@ -13,6 +13,7 @@ page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天�
 if page == "不動產分析":
     st.set_page_config(page_title="台灣不動產分析", layout="wide")
     st.title("台灣地圖與不動產資料分析")
+    st.title("台灣地圖與不動產資料分析")
 
     city_coords = {
         "台北市": [25.0330, 121.5654],
