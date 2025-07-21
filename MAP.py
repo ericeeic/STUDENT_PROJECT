@@ -168,10 +168,10 @@ combined_df['quarter'] = combined_df['ym'].apply(get_quarter)
 st.markdown("## 折線圖分析")
 
 # 綜合季度：BUILD vs 交易筆數總和
-agg_total = combined_df.groupby('BUILD')['transaction_count'].sum().reset_index()
+agg_total = combined_df.groupby('BUILD')['交易筆數'].sum().reset_index()
 
 fig, ax = plt.subplots()
-ax.plot(agg_total['BUILD'], agg_total['transaction_count'], marker='o')
+ax.plot(agg_total['BUILD'], agg_total['交易筆數'], marker='o')
 ax.set_title("不同 BUILD 類別交易筆數總和")
 ax.set_xlabel("BUILD")
 ax.set_ylabel("交易筆數")
@@ -179,18 +179,19 @@ plt.xticks(rotation=45)
 st.pyplot(fig)
 
 # 分季度折線圖
-quarters = combined_df['quarter'].dropna().unique()
+quarters = combined_df['季度'].dropna().unique()
 quarters = sorted(quarters)
 
 with st.expander("各季度 BUILD vs 交易筆數折線圖"):
     for q in quarters:
-        df_q = combined_df[combined_df['quarter'] == q]
-        agg_q = df_q.groupby('BUILD')['transaction_count'].sum().reset_index()
+        df_q = combined_df[combined_df['季度'] == q]
+        agg_q = df_q.groupby('BUILD')['交易筆數'].sum().reset_index()
 
         fig, ax = plt.subplots()
-        ax.plot(agg_q['BUILD'], agg_q['transaction_count'], marker='o')
+        ax.plot(agg_q['BUILD'], agg_q['交易筆數'], marker='o')
         ax.set_title(f"{q} BUILD 類別交易筆數")
         ax.set_xlabel("BUILD")
         ax.set_ylabel("交易筆數")
         plt.xticks(rotation=45)
         st.pyplot(fig)
+
