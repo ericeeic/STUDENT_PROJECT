@@ -232,7 +232,7 @@ elif page == "Gemini 聊天室":
     if st.session_state.api_key:
         try:
             genai.configure(api_key=st.session_state.api_key)
-            MODEL_NAME = "models/gemini-2.0"
+            MODEL_NAME = "	models/gemini-1.5-pro"
             model = genai.GenerativeModel(MODEL_NAME)
         except Exception as e:
             st.error(f"❌ 初始化 Gemini 失敗：{e}")
