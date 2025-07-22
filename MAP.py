@@ -1,19 +1,182 @@
+8/15
+jinkuang.
+線上
+
+Chiffon
+[d.py]
+ — 2025/7/9 下午 09:30
+明天我6.叫卡比起床
+圖片
+8/15 — 2025/7/9 下午 09:30
+🟢
+Chiffon
+[d.py]
+ — 2025/7/9 下午 09:31
+🟢 🟢 🟢
+Chiffon
+[d.py]
+ — 2025/7/12 下午 06:56
+https://www.youtube.com/live/mF9cbZ6tp1c?si=acSBNvNFI7wa1ZsB
+YouTube
+ゲキ！チュウマイ公式ちゃんねる
+サイゴノキボウ
+圖片
+8/15 — 2025/7/13 下午 01:57
+https://youtube.com/shorts/LSeOdJd84Ro?si=wM2w3Jk9r_Tnrpsz
+YouTube
+Kokoyuki Ch.
+Wife Detector #ブルーアーカイブ #ブルアカ #블루아카...
+圖片
+8/15
+ 進行了長達2 小時的通話。 — 2025/7/14 下午 11:24
+8/15 — 2025/7/15 上午 12:31
+圖片
+Chiffon
+[d.py]
+ — 2025/7/15 下午 12:28
+https://youtube.com/shorts/e8_as8wB6-0?si=JPPXj52pI0F902EN
+YouTube
+遊戲考據王
+saber卡池的持续时间惊为天人  一个卡池传三代？ ...
+圖片
+???
+8/15 — 2025/7/15 下午 12:29
+🟢
+2099
+Chiffon
+[d.py]
+ — 2025/7/15 下午 12:29
+🟢
+Chiffon
+[d.py]
+ — 2025/7/15 下午 12:45
+https://youtube.com/shorts/aJNHFZZjWA4?si=ivwRgoxZeR0F3fGL
+YouTube
+狐月
+誰說文字沒有聲音，銀狼說一句我就笑一次 #崩壞...
+圖片
+Chiffon
+[d.py]
+ — 2025/7/15 下午 01:33
+https://youtube.com/shorts/x24DTbUeiU0?si=SDn0uTgaAVnQdTdw
+YouTube
+青青猫meme
+#猫meme小剧场 #猫meme #猫meme搞笑剧情 #猫meme剧场
+圖片
+8/15 — 2025/7/15 下午 02:10
+目標記憶主
+Chiffon
+[d.py]
+ — 2025/7/15 下午 02:11
+😳
+8/15 — 2025/7/15 下午 02:11
+迪拉呆毛傷害如何
+🟢
+Chiffon
+[d.py]
+ — 2025/7/15 下午 02:12
+不錯吧
+到2099年
+我們可以6+5
+8/15 — 2025/7/15 下午 02:15
+就算滿命也要隊友
+🕵️‍♀️
+Chiffon
+[d.py]
+ — 2025/7/15 下午 02:15
+鴨鴨
+很強
+8/15 — 2025/7/15 下午 02:15
+記憶主聽很多人說很好用
+鴨鴨不好用
+Chiffon
+[d.py]
+ — 2025/7/15 下午 02:15
+圖片
+為什麼
+8/15 — 2025/7/15 下午 02:16
+其實也蠻好用的但感覺怪怪的
+🕵️‍♀️
+阮梅不太行
+Chiffon
+[d.py]
+ — 2025/7/15 下午 02:17
+用🦆🦆
+🦆
+8/15
+ 進行了長達2 小時的通話。 — 2025/7/15 下午 10:21
+Chiffon
+[d.py]
+ — 2025/7/15 下午 10:33
+https://youtu.be/Ljr2wMSBHqU?si=lIIFrb_500fISAwG
+YouTube
+ぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬ
+【Official Music Video】みむかｩわナイストライ / Mimuk...
+圖片
+你錯過了來自 
+Chiffon
+ 長達幾秒的通話。 — 2025/7/19 下午 10:19
+Chiffon
+ 進行了長達1 小時的通話。 — 2025/7/19 下午 10:20
+8/15 — 2025/7/20 下午 02:20
+🟢
+8/15 — 2025/7/20 下午 06:57
+圖片
+8/15 — 2025/7/20 下午 08:41
+🟢
+Chiffon
+[d.py]
+ — 2025/7/20 下午 08:44
+20:50
+8/15 — 2025/7/20 下午 08:46
+等等一下下就好
+Chiffon
+ 進行了長達2 分鐘的通話。 — 2025/7/20 下午 08:50
+8/15
+ 進行了長達幾秒的通話。 — 2025/7/20 下午 10:06
+Chiffon
+ 進行了長達1 小時的通話。 — 2025/7/20 下午 10:06
+Chiffon
+[d.py]
+ — 2025/7/20 下午 10:38
+https://youtube.com/shorts/GVVkrTaZ2J4?si=t3Yg8dHmKzFlBvAQ
+YouTube
+いっちゃん
+これって「ジングルベル」！？……メリークリス...
+圖片
+https://youtube.com/shorts/5Xevluysf4Q?si=gGMd2SSWTIXr8S_f
+YouTube
+Cover ETC.
+ian the chase #ian #thechase #dance #chinesedancer #kpop #chinesech...
+圖片
+Chiffon
+[d.py]
+ — 下午 12:31
+🧠 為什麼會這樣？
+
+Gemini 2.0 Flash 是 stateless（無狀態）模型，每次呼叫 API 都是獨立的。
+    •    它不會自動記得你之前說了什麼。
+    •    所以如果你只傳「一句話」去問，它就只根據那句話回答。
+8/15 — 下午 12:35
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from streamlit_echarts import st_echarts
 import json
 import pandas as pd
+import matplotlib.pyplot as plt
 import google.generativeai as genai
 
 # ======= 側邊欄選頁 =======
 page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"])
 
 # ==== 不動產分析頁 ====
+# ==== 不動產分析頁 ====
 if page == "不動產分析":
     st.set_page_config(page_title="台灣不動產分析", layout="wide")
     st.title("台灣地圖與不動產資料分析")
 
+    # 縣市與行政區座標
     city_coords = {
         "台北市": [25.0330, 121.5654],
         "新北市": [25.0169, 121.4628],
@@ -39,6 +202,7 @@ if page == "不動產分析":
     with open("district_coords.json", "r", encoding="utf-8") as f:
         district_coords = json.load(f)
 
+    # Session 狀態
     if "selected_city" not in st.session_state:
         st.session_state.selected_city = None
     if "selected_district" not in st.session_state:
@@ -75,6 +239,7 @@ if page == "不動產分析":
 
         return m
 
+    # 合併不動產 CSV
     file_names = [
         "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
         "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
@@ -93,133 +258,14 @@ if page == "不動產分析":
         for i in range(0, len(cities), cities_per_row):
             cols = st.columns(cities_per_row)
             for idx, city in enumerate(cities[i:i + cities_per_row]):
-                if cols[idx].button(city):
-                    st.session_state.selected_city = city
-                    st.session_state.selected_district = None
-                    st.session_state.show_filtered_data = True
-
-        if st.session_state.selected_city:
-            st.subheader(f"行政區：{st.session_state.selected_city}")
-            districts = district_coords.get(st.session_state.selected_city, {})
-            district_names = ["全部的"] + list(districts.keys())
-            districts_per_row = 3
-            for i in range(0, len(district_names), districts_per_row):
-                row = st.columns(districts_per_row)
-                for j, name in enumerate(district_names[i:i + districts_per_row]):
-                    if row[j].button(name):
-                        if name == "全部的":
-                            st.session_state.selected_district = None
-                        else:
-                            st.session_state.selected_district = name
-                        st.session_state.show_filtered_data = True
-
-            st.divider()
-            if st.button("回到全台灣"):
-                st.session_state.selected_city = None
-                st.session_state.selected_district = None
-                st.session_state.show_filtered_data = False
-        else:
-            st.info("請從右側選擇縣市查看行政區")
-
-    with col1:
-        map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
-        st_folium(map_data, width=800, height=600)
-
-        if st.session_state.show_filtered_data:
-            filtered_df = combined_df.copy()
-            if st.session_state.selected_city:
-                filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
-            if st.session_state.selected_district:
-                filtered_df = filtered_df[filtered_df["行政區"] == st.session_state.selected_district]
-
-            st.markdown("## 📊 篩選後的不動產資料")
-            st.write(f"共 {len(filtered_df)} 筆資料")
-            st.dataframe(filtered_df)
-
-            if len(filtered_df) > 0:
-                filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
-                yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
-                years = sorted(yearly_avg['年份'].unique())
-                year_labels = [str(year) for year in years]
-
-                new_house_data = []
-                old_house_data = []
-
-                for year in years:
-                    new_house_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺']
-                    old_house_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
-
-                    new_house_data.append(int(new_house_avg.iloc[0]) if len(new_house_avg) > 0 else 0)
-                    old_house_data.append(int(old_house_avg.iloc[0]) if len(old_house_avg) > 0 else 0)
-
-                options = {
-                    "title": {"text": "不動產價格趨勢分析"},
-                    "tooltip": {"trigger": "axis"},
-                    "legend": {"data": ["新成屋", "中古屋"]},
-                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
-                    "toolbox": {"feature": {"saveAsImage": {}}},
-                    "xAxis": {
-                        "type": "category",
-                        "boundaryGap": False,
-                        "data": year_labels,
-                    },
-                    "yAxis": {"type": "value", "name": "平均單價(元/平方公尺)"},
-                    "series": [
-                        {
-                            "name": "新成屋",
-                            "type": "line",
-                            "data": new_house_data,
-                            "lineStyle": {"color": "#ff7f0e"},
-                            "itemStyle": {"color": "#ff7f0e"}
-                        },
-                        {
-                            "name": "中古屋",
-                            "type": "line",
-                            "data": old_house_data,
-                            "lineStyle": {"color": "#1f77b4"},
-                            "itemStyle": {"color": "#1f77b4"}
-                        },
-                    ],
-                }
-
-                st_echarts(options=options, height="400px")
-
-# ==== Gemini 聊天室頁 ====
-elif page == "Gemini 聊天室":
-    st.set_page_config(page_title="Gemini 聊天室", layout="wide")
-    st.title("🤖 Gemini AI 聊天室")
-
-    _default_state = {
-        "api_key": "",
-        "remember_api": False,
-        "conversations": {},
-        "topic_ids": [],
-        "current_topic": "new",
-    }
-    for k, v in _default_state.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
-
-    with st.sidebar:
-        st.markdown("## 🔐 API 設定 ")
-        st.session_state.remember_api = st.checkbox(
-            "記住 API 金鑰", value=st.session_state.remember_api
-        )
-        if st.session_state.remember_api and st.session_state.api_key:
-            api_key_input = st.session_state.api_key
-            st.success("✅ 已使用儲存的 API Key")
-        else:
-            api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
-        if api_key_input and api_key_input != st.session_state.api_key:
-            st.session_state.api_key = api_key_input
-
-    if st.session_state.api_key:
-        try:
-            genai.configure(api_key=st.session_state.api_key)
-            MODEL_NAME = "models/gemini-1.5-flash"
-            model = genai.GenerativeModel(MODEL_NAME)
-        except Exception as e:
-            st.error(f"❌ 初始化 Gemini 失敗：{e}")
-            st.stop()
-    else:
-        st.info("⚠️ 請在
+... (還剩 194 行)
+收起
+message.txt
+14 KB
+﻿
+Chiffon
+chiffon0504
+´･ω･`
+[d.py]
+ 
+ 
