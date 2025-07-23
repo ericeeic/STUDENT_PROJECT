@@ -147,7 +147,7 @@ if page == "不動產分析":
                 "選擇圖表類型",
                 ["不動產價格趨勢分析", "購房區域分布"]
             )
-            if chart_type = "不動產價格趨勢分析":
+            if chart_type == "不動產價格趨勢分析":
                 if len(filtered_df) > 0:
                     filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
                     yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
