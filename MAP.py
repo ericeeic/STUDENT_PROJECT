@@ -147,6 +147,7 @@ if page == "不動產分析":
                 "選擇圖表類型",
                 ["不動產價格趨勢分析", "購房區域分布"]
             )
+            
             if chart_type == "不動產價格趨勢分析":
                 if len(filtered_df) > 0:
                     filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
@@ -179,6 +180,45 @@ if page == "不動產分析":
                         ]
                     }
                     st_echarts(options=options, height="400px")
+                if chart_type == "購房區域分布":
+                    # 統計各行政區出現次數（購屋筆數）
+                    district_counts = filtered_df["行政區"].value_counts().reset_index()
+                    district_counts.columns = ["行政區", "購屋筆數"]
+                    
+                    # 建立 pie chart 的資料格式
+                    pie_data = [
+                        {"value": int(row["購屋筆數"]), "name": row["行政區"]}
+                        for _, row in district_counts.iterrows()
+                    ]
+                    
+                    # 建立 ECharts 圓餅圖 options
+                    options = {
+                        "title": {
+                            "text": f"{st.session_state.selected_city or '全台灣'}購屋區域分布",
+                            "subtext": "依成交筆數統計",
+                            "left": "center"
+                        },
+                        "tooltip": {"trigger": "item"},
+                        "legend": {"orient": "vertical", "left": "left"},
+                        "series": [
+                            {
+                                "name": "行政區",
+                                "type": "pie",
+                                "radius": "50%",
+                                "data": pie_data,
+                                "emphasis": {
+                                    "itemStyle": {
+                                        "shadowBlur": 10,
+                                        "shadowOffsetX": 0,
+                                        "shadowColor": "rgba(0, 0, 0, 0.5)",
+                                    }
+                                },
+                            }
+                        ],
+                    }
+                    
+                    st_echarts(options=options, height="600px")
+
 
                 # Gemini AI 趨勢分析按鈕與結果區塊
                 if "api_key" in st.session_state and st.session_state.api_key:
