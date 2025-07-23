@@ -186,7 +186,8 @@ if page == "不動產分析":
                     try:
                         # 判斷是否已選擇縣市
                         if st.session_state.selected_city is None:
-                            # 還沒選擇縣市 - 顯示各縣市的交易筆數分布（使用資料中的交易筆數欄位）
+                            # ===== 縣市級圓餅圖 =====
+                            # 資料處理
                             city_counts = filtered_df.groupby('縣市')['交易筆數'].sum().reset_index()
                             
                             # 準備餅圖數據
@@ -200,6 +201,7 @@ if page == "不動產分析":
                             # 按交易筆數排序，取前10名（避免圖表過於複雜）
                             pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
                             
+                            # 圖表配置
                             options = {
                                 "title": {
                                     "text": "各縣市購房交易筆數分布",
@@ -231,73 +233,83 @@ if page == "不動產分析":
                                 ],
                             }
                             
+                            # 顯示圖表
+                            st_echarts(options=options, height="500px")
+                            
+                            # 統計摘要
+                            total_transactions = filtered_df['交易筆數'].sum()
+                            st.markdown(f"### 📈 統計摘要")
+                            st.markdown(f"- **總交易筆數**: {total_transactions:,} 筆")
+                            st.markdown(f"- **涵蓋縣市數**: {filtered_df['縣市'].nunique()} 個")
+                            if len(filtered_df) > 0:
+                                city_sum = filtered_df.groupby('縣市')['交易筆數'].sum()
+                                top_city = city_sum.idxmax()
+                                top_city_count = city_sum.max()
+                                st.markdown(f"- **交易最多縣市**: {top_city} ({top_city_count:,} 筆)")
+                            
                         else:
-                            # 已選擇縣市 - 顯示該縣市內各行政區的交易筆數分布（使用資料中的交易筆數欄位）
+                            # 已選擇縣市的情況
                             if st.session_state.selected_district is None:
-                                # 顯示該縣市內所有行政區
+                                # ===== 行政區級圓餅圖 =====
+                                # 資料處理
                                 district_counts = filtered_df.groupby('行政區')['交易筆數'].sum().reset_index()
-                                chart_title = f"{st.session_state.selected_city} 各行政區購房交易筆數分布"
-                                subtitle = f"共 {len(district_counts)} 個行政區"
-                            else:
-                                # 如果選擇了特定行政區，顯示該行政區的建物類型分布
-                                build_counts = filtered_df.groupby('BUILD')['交易筆數'].sum().reset_index()
-                                district_counts = build_counts.rename(columns={'BUILD': '行政區'})
-                                chart_title = f"{st.session_state.selected_city} {st.session_state.selected_district} 建物類型分布"
-                                subtitle = "新成屋 vs 中古屋"
-                            
-                            # 準備餅圖數據
-                            pie_data = []
-                            for _, row in district_counts.iterrows():
-                                pie_data.append({
-                                    "value": int(row['交易筆數']),
-                                    "name": row['行政區']
-                                })
-                            
-                            # 如果行政區太多，只顯示前15名
-                            if len(pie_data) > 15:
-                                pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:15]
-                                subtitle += " (顯示前15名)"
-                            
-                            options = {
-                                "title": {
-                                    "text": chart_title,
-                                    "subtext": subtitle,
-                                    "left": "center"
-                                },
-                                "tooltip": {
-                                    "trigger": "item",
-                                    "formatter": "{a} <br/>{b} : {c} ({d}%)"
-                                },
-                                "legend": {
-                                    "orient": "vertical",
-                                    "left": "left",
-                                    "type": "scroll",  # 如果圖例太多，允許滾動
-                                    "height": "80%"
-                                },
-                                "series": [
-                                    {
-                                        "name": "交易筆數",
-                                        "type": "pie",
-                                        "radius": ["20%", "50%"],  # 使用環形圖，更美觀
-                                        "center": ["60%", "50%"],  # 向右移動，給圖例留空間
-                                        "data": pie_data,
-                                        "emphasis": {
-                                            "itemStyle": {
-                                                "shadowBlur": 10,
-                                                "shadowOffsetX": 0,
-                                                "shadowColor": "rgba(0, 0, 0, 0.5)",
+                                
+                                # 準備餅圖數據
+                                pie_data = []
+                                for _, row in district_counts.iterrows():
+                                    pie_data.append({
+                                        "value": int(row['交易筆數']),
+                                        "name": row['行政區']
+                                    })
+                                
+                                # 如果行政區太多，只顯示前15名
+                                if len(pie_data) > 15:
+                                    pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:15]
+                                    subtitle = f"共 {len(district_counts)} 個行政區 (顯示前15名)"
+                                else:
+                                    subtitle = f"共 {len(district_counts)} 個行政區"
+                                
+                                # 圖表配置
+                                options = {
+                                    "title": {
+                                        "text": f"{st.session_state.selected_city} 各行政區購房交易筆數分布",
+                                        "subtext": subtitle,
+                                        "left": "center"
+                                    },
+                                    "tooltip": {
+                                        "trigger": "item",
+                                        "formatter": "{a} <br/>{b} : {c} ({d}%)"
+                                    },
+                                    "legend": {
+                                        "orient": "vertical",
+                                        "left": "left",
+                                        "type": "scroll",
+                                        "height": "80%"
+                                    },
+                                    "series": [
+                                        {
+                                            "name": "交易筆數",
+                                            "type": "pie",
+                                            "radius": ["20%", "50%"],
+                                            "center": ["60%", "50%"],
+                                            "data": pie_data,
+                                            "emphasis": {
+                                                "itemStyle": {
+                                                    "shadowBlur": 10,
+                                                    "shadowOffsetX": 0,
+                                                    "shadowColor": "rgba(0, 0, 0, 0.5)",
+                                                }
+                                            },
+                                            "label": {
+                                                "show": True,
+                                                "formatter": "{b}: {c}"
                                             }
-                                        },
-                                        "label": {
-                                            "show": True,
-                                            "formatter": "{b}: {c}"
                                         }
-                                    }
-                                ],
-                            }
-                        
-                        # 顯示圖表
-                        st_echarts(options=options, height="500px")
+                                    ],
+                                }
+                                
+                                # 顯示圖表
+                                st_echarts(options=options, height="500px")
 
                 # Gemini AI 趨勢分析按鈕與結果區塊
                 if "api_key" in st.session_state and st.session_state.api_key:
