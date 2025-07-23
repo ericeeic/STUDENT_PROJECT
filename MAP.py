@@ -215,7 +215,7 @@ if page == "不動產分析":
                         chart_title = "各縣市購房交易筆數分布"
                     else:
                         group_column = '行政區'
-                        chart_title = f"{st.session_state.selected_city} 各行政區交易筆數分布"
+                        chart_title = f"{st.session_state.selected_city} 交易筆數分布"
             
                     if group_column in filtered_df.columns:
                         # 統計資料
