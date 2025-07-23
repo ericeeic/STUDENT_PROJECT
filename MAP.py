@@ -208,13 +208,8 @@ if page == "不動產分析":
                     # 檢查欄位是否存在
                     has_transaction = '交易筆數' in filtered_df.columns
             
-                    # 決定分組欄位
-                    if st.session_state.selected_city is None:
-                        group_column = '縣市'
-                        chart_title = "各縣市購房交易筆數分布"
-                    else:
-                        group_column = '行政區'
-                        chart_title = f"{st.session_state.selected_city} 交易筆數分布"
+                    group_column = '行政區'
+                    chart_title = f"{st.session_state.selected_city} 交易筆數分布"
             
                     if group_column in filtered_df.columns:
                         # 統計資料
