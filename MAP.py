@@ -131,7 +131,7 @@ if page == "不動產分析":
     with col1:
         map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
         st_folium(map_data, width=800, height=600)
-
+        
         if st.session_state.show_filtered_data:
             filtered_df = combined_df.copy()
             if st.session_state.selected_city:
@@ -142,7 +142,12 @@ if page == "不動產分析":
             st.markdown("## 📊 篩選後的不動產資料")
             st.write(f"共 {len(filtered_df)} 筆資料")
             st.dataframe(filtered_df)
-
+            
+            chart_type = st.sidebar.selectbox(
+                "選擇圖表類型",
+                ["不動產價格趨勢分析", "長條圖"]
+            )
+            
             if len(filtered_df) > 0:
                 filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
                 yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
@@ -157,10 +162,6 @@ if page == "不動產分析":
                     new_house_data.append(int(new_avg.iloc[0]) if len(new_avg) > 0 else 0)
                     old_house_data.append(int(old_avg.iloc[0]) if len(old_avg) > 0 else 0)
                 
-                chart_type = st.sidebar.selectbox(
-                    "選擇圖表類型",
-                    ["不動產價格趨勢分析", "長條圖"]
-                )
                 
                 options = {
                     "title": {"text": "不動產價格趨勢分析"},
