@@ -145,7 +145,7 @@ if page == "不動產分析":
             
             chart_type = st.sidebar.selectbox(
                 "選擇圖表類型",
-                ["不動產價格趨勢分析", "購房區域分布"]
+                ["不動產價格趨勢分析", "交易筆數分布"]
             )
             
             if chart_type == "不動產價格趨勢分析":
@@ -204,7 +204,7 @@ if page == "不動產分析":
                 else:
                     st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")                
             
-            if chart_type == "購房區域分布":
+            if chart_type == "交易筆數分布":
                 if len(filtered_df) > 0:
                     # 檢查欄位是否存在
                     has_transaction = '交易筆數' in filtered_df.columns
