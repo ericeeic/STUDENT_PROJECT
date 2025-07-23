@@ -159,7 +159,7 @@ if page == "不動產分析":
                 
                 chart_type = st.sidebar.selectbox(
                     "選擇圖表類型",
-                    ["折線圖", "長條圖"]
+                    ["不動產價格趨勢分析", "長條圖"]
                 )
                 
                 options = {
