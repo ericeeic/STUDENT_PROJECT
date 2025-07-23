@@ -209,8 +209,12 @@ if page == "不動產分析":
                     has_transaction = '交易筆數' in filtered_df.columns
             
                     group_column = '行政區'
+                    # 先處理預設標題
                     chart_title = f"{st.session_state.selected_city} 交易筆數分布"
-            
+                
+                    # 如果有選行政區，代表只有一筆資料，那就改成該行政區為標題
+                    if st.session_state.selected_district:
+                        chart_title = f"{st.session_state.selected_district} 交易筆數分布"
                     if group_column in filtered_df.columns:
                         # 統計資料
                         if has_transaction:
