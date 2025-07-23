@@ -184,29 +184,29 @@ if page == "不動產分析":
             if chart_type == "購房區域分布":
 
 
-            # Gemini AI 趨勢分析按鈕與結果區塊
-            if "api_key" in st.session_state and st.session_state.api_key:
-                if st.button("📈 用 Gemini AI 分析趨勢"):
-                    with st.spinner("Gemini AI 正在分析中..."):
-                        try:
-                            genai.configure(api_key=st.session_state.api_key)
-                            model = genai.GenerativeModel("models/gemini-2.0-flash")
-
-                            # 將篩選資料取前10筆CSV字串當成 prompt 資料
-                            sample_text = filtered_df.head(10).to_csv(index=False, encoding="utf-8")
-                            prompt = (
-                                "請根據以下台灣不動產資料，分析未來趨勢和重要觀察點：\n"
-                                f"{sample_text}\n"
-                                "請用繁體中文簡潔且專業地說明趨勢分析。"
-                            )
-                            response = model.generate_content(prompt).text.strip()
-
-                            st.markdown("### 🤖 Gemini AI 趨勢分析結果")
-                            st.write(response)
-                        except Exception as e:
-                            st.error(f"Gemini AI 分析錯誤：{e}")
-            else:
-                st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")
+                # Gemini AI 趨勢分析按鈕與結果區塊
+                if "api_key" in st.session_state and st.session_state.api_key:
+                    if st.button("📈 用 Gemini AI 分析趨勢"):
+                        with st.spinner("Gemini AI 正在分析中..."):
+                            try:
+                                genai.configure(api_key=st.session_state.api_key)
+                                model = genai.GenerativeModel("models/gemini-2.0-flash")
+    
+                                # 將篩選資料取前10筆CSV字串當成 prompt 資料
+                                sample_text = filtered_df.head(10).to_csv(index=False, encoding="utf-8")
+                                prompt = (
+                                    "請根據以下台灣不動產資料，分析未來趨勢和重要觀察點：\n"
+                                    f"{sample_text}\n"
+                                    "請用繁體中文簡潔且專業地說明趨勢分析。"
+                                )
+                                response = model.generate_content(prompt).text.strip()
+    
+                                st.markdown("### 🤖 Gemini AI 趨勢分析結果")
+                                st.write(response)
+                            except Exception as e:
+                                st.error(f"Gemini AI 分析錯誤：{e}")
+                else:
+                    st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")
 
 # ---------------- Gemini 聊天室頁 ----------------
 elif page == "Gemini 聊天室":
