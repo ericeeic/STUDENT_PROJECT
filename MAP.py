@@ -205,7 +205,59 @@ if page == "不動產分析":
                     st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")                
             
             if chart_type == "購房區域分布":
-
+                if len(filtered_df) > 0:
+                    try:
+                        # 判斷是否已選擇縣市
+                        if st.session_state.selected_city is None:
+                            # ===== 縣市級圓餅圖 =====
+                            # 資料處理
+                            city_counts = filtered_df.groupby('縣市')['交易筆數'].sum().reset_index()
+                            
+                            # 準備餅圖數據
+                            pie_data = []
+                            for _, row in city_counts.iterrows():
+                                pie_data.append({
+                                    "value": int(row['交易筆數']),
+                                    "name": row['縣市']
+                                })
+                            
+                            # 按交易筆數排序，取前10名（避免圖表過於複雜）
+                            pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
+                            
+                            # 圖表配置
+                            options = {
+                                "title": {
+                                    "text": "各縣市購房交易筆數分布",
+                                    "subtext": "顯示前10名縣市",
+                                    "left": "center"
+                                },
+                                "tooltip": {
+                                    "trigger": "item",
+                                    "formatter": "{a} <br/>{b} : {c} ({d}%)"
+                                },
+                                "legend": {
+                                    "orient": "vertical",
+                                    "left": "left",
+                                },
+                                "series": [
+                                    {
+                                        "name": "交易筆數",
+                                        "type": "pie",
+                                        "radius": "50%",
+                                        "data": pie_data,
+                                        "emphasis": {
+                                            "itemStyle": {
+                                                "shadowBlur": 10,
+                                                "shadowOffsetX": 0,
+                                                "shadowColor": "rgba(0, 0, 0, 0.5)",
+                                            }
+                                        },
+                                    }
+                                ],
+                            }
+                            
+                            # 顯示圖表
+                            st_echarts(options=options, height="500px")
 
                 # Gemini AI 趨勢分析按鈕與結果區塊
                 if "api_key" in st.session_state and st.session_state.api_key:
