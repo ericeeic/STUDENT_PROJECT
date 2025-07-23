@@ -205,36 +205,7 @@ if page == "不動產分析":
                     st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")                
             
             if chart_type == "購房區域分布":
-                if len(filtered_df) > 0:
-                    # ========== DEBUG 區塊 ==========
-                    st.markdown("### 🔍 Debug 資訊")
-                    
-                    # 1. 檢查資料基本資訊
-                    st.write("**1. 資料基本資訊:**")
-                    st.write(f"- 資料筆數: {len(filtered_df)}")
-                    st.write(f"- 資料欄位: {list(filtered_df.columns)}")
-                    
-                    # 2. 檢查關鍵欄位
-                    st.write("**2. 關鍵欄位檢查:**")
-                    has_county = '縣市' in filtered_df.columns
-                    has_transaction = '交易筆數' in filtered_df.columns
-                    st.write(f"- 是否有 '縣市' 欄位: {has_county}")
-                    st.write(f"- 是否有 '交易筆數' 欄位: {has_transaction}")
-                    
-                    if has_county:
-                        unique_cities = filtered_df['縣市'].unique()
-                        st.write(f"- 縣市數量: {len(unique_cities)}")
-                        st.write(f"- 縣市清單: {list(unique_cities)}")
-                    
-                    # 3. 檢查 session state
-                    st.write("**3. Session State 檢查:**")
-                    st.write(f"- selected_city: {st.session_state.selected_city}")
-                    st.write(f"- selected_district: {st.session_state.selected_district}")
-                    
-                    # 4. 顯示前幾筆資料
-                    st.write("**4. 前5筆資料:**")
-                    st.dataframe(filtered_df.head())
-                    
+                if len(filtered_df) > 0:                   
                     # ========== 實際處理 ==========
                     st.markdown("### 📊 圖表處理")
                     
