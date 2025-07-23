@@ -203,10 +203,8 @@ if page == "不動產分析":
                     st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")                
             
             if chart_type == "交易筆數分布":
-                # 檢查欄位是否存在
-                has_transaction = '交易筆數' in filtered_df.columns
-        
                 if st.session_state.selected_city is None:
+                    filtered_df = combined_df.copy()
                     group_column = '縣市'
                     chart_title = "各縣市購房交易筆數分布"
                 else:
@@ -220,6 +218,7 @@ if page == "不動產分析":
                         chart_title = f"{st.session_state.selected_district} 交易筆數分布"
                     
                 if group_column in filtered_df.columns:
+                    has_transaction = '交易筆數' in filtered_df.columns
                     # 統計資料
                     if has_transaction:
                         counts = filtered_df.groupby(group_column)['交易筆數'].sum().reset_index()
