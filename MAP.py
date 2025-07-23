@@ -203,69 +203,69 @@ if page == "不動產分析":
                     st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")                
             
             if chart_type == "交易筆數分布":
-                if st.session_state.selected_city is None:
-                    filtered_df = combined_df.copy()
-                    group_column = '縣市'
-                    chart_title = "各縣市購房交易筆數分布"
-                else:
-                    group_column = '行政區'
-                
-                    # 先處理預設標題
-                    chart_title = f"{st.session_state.selected_city} 交易筆數分布"
-                
-                    # 如果有選行政區，代表只有一筆資料，那就改成該行政區為標題
-                    if st.session_state.selected_district:
-                        chart_title = f"{st.session_state.selected_district} 交易筆數分布"
-                    
-                if group_column in filtered_df.columns:
-                    has_transaction = '交易筆數' in filtered_df.columns
-                    # 統計資料
-                    if has_transaction:
-                        counts = filtered_df.groupby(group_column)['交易筆數'].sum().reset_index()
+                if len(filtered_df) > 0:        
+                    if st.session_state.selected_city is None:
+                        group_column = '縣市'
+                        chart_title = "各縣市購房交易筆數分布"
                     else:
-                        counts = filtered_df.groupby(group_column).size().reset_index(name='交易筆數')
-        
-                    # 準備餅圖資料
-                    pie_data = [
-                        {"value": int(row["交易筆數"]), "name": row[group_column]}
-                        for _, row in counts.iterrows()
-                    ]
-                    pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
-                    # 檢查資料後繪製圖表
-                    if pie_data and sum(item['value'] for item in pie_data) > 0:
-                        subtext = f"顯示前{len(pie_data)}名" if len(pie_data) >= 10 else ""
-                        options = {
-                            "title": {
-                                "text": chart_title,
-                                "subtext": subtext,
-                                "left": "center"
-                            },
-                            "tooltip": {
-                                "trigger": "item",
-                                "formatter": "{a} <br/>{b} : {c} ({d}%)"
-                            },
-                            "legend": {
-                                "orient": "vertical",
-                                "left": "left",
-                            },
-                            "series": [
-                                {
-                                    "name": "交易筆數",
-                                    "type": "pie",
-                                    "radius": "50%",
-                                    "data": pie_data,
-                                    "emphasis": {
-                                        "itemStyle": {
-                                            "shadowBlur": 10,
-                                            "shadowOffsetX": 0,
-                                            "shadowColor": "rgba(0, 0, 0, 0.5)",
-                                        }
-                                    },
-                                }
-                            ],
-                        }
-        
-                        st_echarts(options=options, height="500px")
+                        group_column = '行政區'
+                    
+                        # 先處理預設標題
+                        chart_title = f"{st.session_state.selected_city} 交易筆數分布"
+                    
+                        # 如果有選行政區，代表只有一筆資料，那就改成該行政區為標題
+                        if st.session_state.selected_district:
+                            chart_title = f"{st.session_state.selected_district} 交易筆數分布"
+                        
+                    if group_column in filtered_df.columns:
+                        has_transaction = '交易筆數' in filtered_df.columns
+                        # 統計資料
+                        if has_transaction:
+                            counts = filtered_df.groupby(group_column)['交易筆數'].sum().reset_index()
+                        else:
+                            counts = filtered_df.groupby(group_column).size().reset_index(name='交易筆數')
+            
+                        # 準備餅圖資料
+                        pie_data = [
+                            {"value": int(row["交易筆數"]), "name": row[group_column]}
+                            for _, row in counts.iterrows()
+                        ]
+                        pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
+                        # 檢查資料後繪製圖表
+                        if pie_data and sum(item['value'] for item in pie_data) > 0:
+                            subtext = f"顯示前{len(pie_data)}名" if len(pie_data) >= 10 else ""
+                            options = {
+                                "title": {
+                                    "text": chart_title,
+                                    "subtext": subtext,
+                                    "left": "center"
+                                },
+                                "tooltip": {
+                                    "trigger": "item",
+                                    "formatter": "{a} <br/>{b} : {c} ({d}%)"
+                                },
+                                "legend": {
+                                    "orient": "vertical",
+                                    "left": "left",
+                                },
+                                "series": [
+                                    {
+                                        "name": "交易筆數",
+                                        "type": "pie",
+                                        "radius": "50%",
+                                        "data": pie_data,
+                                        "emphasis": {
+                                            "itemStyle": {
+                                                "shadowBlur": 10,
+                                                "shadowOffsetX": 0,
+                                                "shadowColor": "rgba(0, 0, 0, 0.5)",
+                                            }
+                                        },
+                                    }
+                                ],
+                            }
+            
+                            st_echarts(options=options, height="500px")
 
                 # Gemini AI 趨勢分析按鈕與結果區塊
                 if "api_key" in st.session_state and st.session_state.api_key:
