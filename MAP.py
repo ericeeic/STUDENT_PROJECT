@@ -12,7 +12,7 @@ import os
 st.set_page_config(page_title="台灣不動產與 Gemini 聊天室", layout="wide")
 
 # 頁面選擇
-page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"])
+page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"], key="page")
 
 # 共用 Session State 初始化
 def init_state(defaults):
