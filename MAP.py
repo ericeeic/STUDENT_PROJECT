@@ -205,130 +205,131 @@ if page == "不動產分析":
                     st.info("請先在 Gemini 聊天室頁面輸入並保存 API 金鑰，才能使用趨勢分析功能。")                
             
             if chart_type == "購房區域分布":
-                if len(filtered_df) > 0:
-                    # ========== DEBUG 區塊 ==========
-                    st.markdown("### 🔍 Debug 資訊")
-                    
-                    # 1. 檢查資料基本資訊
-                    st.write("**1. 資料基本資訊:**")
-                    st.write(f"- 資料筆數: {len(filtered_df)}")
-                    st.write(f"- 資料欄位: {list(filtered_df.columns)}")
-                    
-                    # 2. 檢查關鍵欄位
-                    st.write("**2. 關鍵欄位檢查:**")
-                    has_county = '縣市' in filtered_df.columns
-                    has_transaction = '交易筆數' in filtered_df.columns
-                    st.write(f"- 是否有 '縣市' 欄位: {has_county}")
-                    st.write(f"- 是否有 '交易筆數' 欄位: {has_transaction}")
-                    
-                    if has_county:
-                        unique_cities = filtered_df['縣市'].unique()
-                        st.write(f"- 縣市數量: {len(unique_cities)}")
-                        st.write(f"- 縣市清單: {list(unique_cities)}")
-                    
-                    # 3. 檢查 session state
-                    st.write("**3. Session State 檢查:**")
-                    st.write(f"- selected_city: {st.session_state.selected_city}")
-                    st.write(f"- selected_district: {st.session_state.selected_district}")
-                    
-                    # 4. 顯示前幾筆資料
-                    st.write("**4. 前5筆資料:**")
-                    st.dataframe(filtered_df.head())
-                    
-                    # ========== 實際處理 ==========
-                    st.markdown("### 📊 圖表處理")
-                    
-                    # 判斷是否已選擇縣市
-                    if st.session_state.selected_city is None:
-                        st.write("**處理模式: 全國縣市分布**")
-                        
-                        if has_county:
-                            if has_transaction:
-                                st.write("使用 '交易筆數' 欄位進行統計")
-                                city_counts = filtered_df.groupby('縣市')['交易筆數'].sum().reset_index()
-                            else:
-                                st.write("沒有 '交易筆數' 欄位，使用記錄數量統計")
-                                city_counts = filtered_df.groupby('縣市').size().reset_index(name='交易筆數')
-                            
-                            st.write("**縣市統計結果:**")
-                            st.dataframe(city_counts)
-                            
-                            # 準備餅圖數據
-                            pie_data = []
-                            for _, row in city_counts.iterrows():
-                                pie_data.append({
-                                    "value": int(row['交易筆數']),
-                                    "name": row['縣市']
-                                })
-                            
-                            st.write(f"**原始圓餅圖資料 ({len(pie_data)} 項):**")
-                            for item in pie_data:
-                                st.write(f"- {item['name']}: {item['value']}")
-                            
-                            # 按交易筆數排序，取前10名
-                            pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
-                            
-                            st.write(f"**排序後前10名資料 ({len(pie_data)} 項):**")
-                            for i, item in enumerate(pie_data, 1):
-                                st.write(f"{i}. {item['name']}: {item['value']}")
-                            
-                            # 檢查是否有資料可以顯示圖表
-                            if len(pie_data) > 0 and sum(item['value'] for item in pie_data) > 0:
-                                st.write("✅ 資料檢查通過，開始繪製圖表")
-                                
-                                # 圖表配置
-                                options = {
-                                    "title": {
-                                        "text": "各縣市購房交易筆數分布",
-                                        "subtext": f"顯示前{len(pie_data)}名縣市",
-                                        "left": "center"
-                                    },
-                                    "tooltip": {
-                                        "trigger": "item",
-                                        "formatter": "{a} <br/>{b} : {c} ({d}%)"
-                                    },
-                                    "legend": {
-                                        "orient": "vertical",
-                                        "left": "left",
-                                    },
-                                    "series": [
-                                        {
-                                            "name": "交易筆數",
-                                            "type": "pie",
-                                            "radius": "50%",
-                                            "data": pie_data,
-                                            "emphasis": {
-                                                "itemStyle": {
-                                                    "shadowBlur": 10,
-                                                    "shadowOffsetX": 0,
-                                                    "shadowColor": "rgba(0, 0, 0, 0.5)",
-                                                }
-                                            },
-                                        }
-                                    ],
+    if len(filtered_df) > 0:
+        # ========== DEBUG 區塊 ==========
+        st.markdown("### 🔍 Debug 資訊")
+        
+        # 1. 檢查資料基本資訊
+        st.write("**1. 資料基本資訊:**")
+        st.write(f"- 資料筆數: {len(filtered_df)}")
+        st.write(f"- 資料欄位: {list(filtered_df.columns)}")
+        
+        # 2. 檢查關鍵欄位
+        st.write("**2. 關鍵欄位檢查:**")
+        has_county = '縣市' in filtered_df.columns
+        has_transaction = '交易筆數' in filtered_df.columns
+        st.write(f"- 是否有 '縣市' 欄位: {has_county}")
+        st.write(f"- 是否有 '交易筆數' 欄位: {has_transaction}")
+        
+        if has_county:
+            unique_cities = filtered_df['縣市'].unique()
+            st.write(f"- 縣市數量: {len(unique_cities)}")
+            st.write(f"- 縣市清單: {list(unique_cities)}")
+        
+        # 3. 檢查 session state
+        st.write("**3. Session State 檢查:**")
+        st.write(f"- selected_city: {st.session_state.selected_city}")
+        st.write(f"- selected_district: {st.session_state.selected_district}")
+        
+        # 4. 顯示前幾筆資料
+        st.write("**4. 前5筆資料:**")
+        st.dataframe(filtered_df.head())
+        
+        # ========== 實際處理 ==========
+        st.markdown("### 📊 圖表處理")
+        
+        # 根據選擇狀態決定顯示層級
+        if st.session_state.selected_city is None:
+            st.write("**處理模式: 全國縣市分布**")
+            group_column = '縣市'
+            chart_title = "各縣市購房交易筆數分布"
+        else:
+            st.write(f"**處理模式: {st.session_state.selected_city} 行政區分布**")
+            group_column = '行政區'
+            chart_title = f"{st.session_state.selected_city} 各行政區交易筆數分布"
+        
+        # 檢查分組欄位是否存在
+        if group_column in filtered_df.columns:
+            if has_transaction:
+                st.write(f"使用 '交易筆數' 欄位對 '{group_column}' 進行統計")
+                counts = filtered_df.groupby(group_column)['交易筆數'].sum().reset_index()
+            else:
+                st.write(f"沒有 '交易筆數' 欄位，使用記錄數量對 '{group_column}' 統計")
+                counts = filtered_df.groupby(group_column).size().reset_index(name='交易筆數')
+            
+            st.write(f"**{group_column}統計結果:**")
+            st.dataframe(counts)
+            
+            # 準備餅圖數據
+            pie_data = []
+            for _, row in counts.iterrows():
+                pie_data.append({
+                    "value": int(row['交易筆數']),
+                    "name": row[group_column]
+                })
+            
+            st.write(f"**原始圓餅圖資料 ({len(pie_data)} 項):**")
+            for item in pie_data:
+                st.write(f"- {item['name']}: {item['value']}")
+            
+            # 按交易筆數排序，取前10名
+            pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
+            
+            st.write(f"**排序後前10名資料 ({len(pie_data)} 項):**")
+            for i, item in enumerate(pie_data, 1):
+                st.write(f"{i}. {item['name']}: {item['value']}")
+            
+            # 檢查是否有資料可以顯示圖表
+            if len(pie_data) > 0 and sum(item['value'] for item in pie_data) > 0:
+                st.write("✅ 資料檢查通過，開始繪製圖表")
+                
+                # 圖表配置
+                options = {
+                    "title": {
+                        "text": chart_title,
+                        "subtext": f"顯示前{len(pie_data)}名",
+                        "left": "center"
+                    },
+                    "tooltip": {
+                        "trigger": "item",
+                        "formatter": "{a} <br/>{b} : {c} ({d}%)"
+                    },
+                    "legend": {
+                        "orient": "vertical",
+                        "left": "left",
+                    },
+                    "series": [
+                        {
+                            "name": "交易筆數",
+                            "type": "pie",
+                            "radius": "50%",
+                            "data": pie_data,
+                            "emphasis": {
+                                "itemStyle": {
+                                    "shadowBlur": 10,
+                                    "shadowOffsetX": 0,
+                                    "shadowColor": "rgba(0, 0, 0, 0.5)",
                                 }
-                                
-                                st.write("**圖表配置:**")
-                                st.json(options)
-                                
-                                # 顯示圖表
-                                st.write("**繪製圖表中...**")
-                                st_echarts(options=options, height="500px")
-                                st.write("✅ 圖表繪製完成")
-                                
-                            else:
-                                st.error("❌ 沒有有效資料可以顯示圓餅圖")
-                                st.write(f"- 資料項目數: {len(pie_data)}")
-                                st.write(f"- 資料總和: {sum(item['value'] for item in pie_data) if pie_data else 0}")
-                                
-                        else:
-                            st.error("❌ 資料中沒有 '縣市' 欄位")
-                            
-                    else:
-                        st.write(f"**處理模式: {st.session_state.selected_city} 行政區分布**")
-                        # 這裡可以加入行政區的處理邏輯
-                        st.info("行政區分布功能待實作")
-
+                            },
+                        }
+                    ],
+                }
+                
+                st.write("**圖表配置:**")
+                st.json(options)
+                
+                # 顯示圖表
+                st.write("**繪製圖表中...**")
+                st_echarts(options=options, height="500px")
+                st.write("✅ 圖表繪製完成")
+                
+            else:
+                st.error("❌ 沒有有效資料可以顯示圓餅圖")
+                st.write(f"- 資料項目數: {len(pie_data)}")
+                st.write(f"- 資料總和: {sum(item['value'] for item in pie_data) if pie_data else 0}")
+                
+        else:
+            st.error(f"❌ 資料中沒有 '{group_column}' 欄位")
 
                 # Gemini AI 趨勢分析按鈕與結果區塊
                 if "api_key" in st.session_state and st.session_state.api_key:
