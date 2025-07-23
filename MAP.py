@@ -145,40 +145,40 @@ if page == "不動產分析":
             
             chart_type = st.sidebar.selectbox(
                 "選擇圖表類型",
-                ["不動產價格趨勢分析", "長條圖"]
+                ["不動產價格趨勢分析", "購房區域分布"]
             )
-            
-            if len(filtered_df) > 0:
-                filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
-                yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
-                years = sorted(yearly_avg['年份'].unique())
-                year_labels = [str(year) for year in years]
-
-                new_house_data = []
-                old_house_data = []
-                for year in years:
-                    new_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺']
-                    old_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
-                    new_house_data.append(int(new_avg.iloc[0]) if len(new_avg) > 0 else 0)
-                    old_house_data.append(int(old_avg.iloc[0]) if len(old_avg) > 0 else 0)
-                
-                
-                options = {
-                    "title": {"text": "不動產價格趨勢分析"},
-                    "tooltip": {"trigger": "axis"},
-                    "legend": {"data": ["新成屋", "中古屋"]},
-                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
-                    "toolbox": {"feature": {"saveAsImage": {}}},
-                    "xAxis": {"type": "category", "boundaryGap": False, "data": year_labels},
-                    "yAxis": {"type": "value", "name": "平均單價(元/平方公尺)"},
-                    "series": [
-                        {"name": "新成屋", "type": "line", "data": new_house_data,
-                         "lineStyle": {"color": "#ff7f0e"}, "itemStyle": {"color": "#ff7f0e"}},
-                        {"name": "中古屋", "type": "line", "data": old_house_data,
-                         "lineStyle": {"color": "#1f77b4"}, "itemStyle": {"color": "#1f77b4"}},
-                    ]
-                }
-                st_echarts(options=options, height="400px")
+            if chart_type = "不動產價格趨勢分析":
+                if len(filtered_df) > 0:
+                    filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
+                    yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
+                    years = sorted(yearly_avg['年份'].unique())
+                    year_labels = [str(year) for year in years]
+    
+                    new_house_data = []
+                    old_house_data = []
+                    for year in years:
+                        new_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺']
+                        old_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
+                        new_house_data.append(int(new_avg.iloc[0]) if len(new_avg) > 0 else 0)
+                        old_house_data.append(int(old_avg.iloc[0]) if len(old_avg) > 0 else 0)
+                    
+                    
+                    options = {
+                        "title": {"text": "不動產價格趨勢分析"},
+                        "tooltip": {"trigger": "axis"},
+                        "legend": {"data": ["新成屋", "中古屋"]},
+                        "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+                        "toolbox": {"feature": {"saveAsImage": {}}},
+                        "xAxis": {"type": "category", "boundaryGap": False, "data": year_labels},
+                        "yAxis": {"type": "value", "name": "平均單價(元/平方公尺)"},
+                        "series": [
+                            {"name": "新成屋", "type": "line", "data": new_house_data,
+                             "lineStyle": {"color": "#ff7f0e"}, "itemStyle": {"color": "#ff7f0e"}},
+                            {"name": "中古屋", "type": "line", "data": old_house_data,
+                             "lineStyle": {"color": "#1f77b4"}, "itemStyle": {"color": "#1f77b4"}},
+                        ]
+                    }
+                    st_echarts(options=options, height="400px")
 
                 # Gemini AI 趨勢分析按鈕與結果區塊
                 if "api_key" in st.session_state and st.session_state.api_key:
