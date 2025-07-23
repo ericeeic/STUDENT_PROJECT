@@ -209,7 +209,7 @@ if page == "不動產分析":
                     # 圖表配置
                     options = {
                         "title": {
-                            "text": chart_title,
+                            "text": "購房分布圖",
                             "subtext": f"顯示前{len(pie_data)}名",
                             "left": "center"
                         },
