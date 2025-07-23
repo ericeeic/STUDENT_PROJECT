@@ -224,13 +224,13 @@ if page == "不動產分析":
                             for _, row in counts.iterrows()
                         ]
                         pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
-            
                         # 檢查資料後繪製圖表
                         if pie_data and sum(item['value'] for item in pie_data) > 0:
+                            subtext = f"顯示前{len(pie_data)}名" if len(pie_data) >= 10 else ""
                             options = {
                                 "title": {
                                     "text": chart_title,
-                                    "subtext": f"顯示前{len(pie_data)}名",
+                                    "subtext": subtext,
                                     "left": "center"
                                 },
                                 "tooltip": {
