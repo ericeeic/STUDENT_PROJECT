@@ -183,11 +183,11 @@ if page == "不動產分析":
                 if chart_type == "購房區域分布":
                     # 統計各行政區出現次數（購屋筆數）
                     district_counts = filtered_df["行政區"].value_counts().reset_index()
-                    district_counts.columns = ["行政區", "購屋筆數"]
+                    district_counts.columns = ["行政區", "交易筆數"]
                     
                     # 建立 pie chart 的資料格式
                     pie_data = [
-                        {"value": int(row["購屋筆數"]), "name": row["行政區"]}
+                        {"value": int(row["交易筆數"]), "name": row["行政區"]}
                         for _, row in district_counts.iterrows()
                     ]
                     
