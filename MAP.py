@@ -214,28 +214,23 @@ elif page == "Gemini 聊天室":
     with st.sidebar:
         st.markdown("## 🔐 API 設定")
         st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
-    
-        api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
-    
-        if st.button("✅ 確認 API 金鑰"):
-            def validate_api_key(api_key: str) -> bool:
-                try:
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel("models/gemini-2.0-flash")
-                    res = model.generate_content("你好").text
-                    return True if res else False
-                except Exception:
-                    return False
-    
-            if api_key_input:
-                if validate_api_key(api_key_input):
-                    st.session_state.api_key = api_key_input
-                    st.success("✅ API 金鑰驗證成功！")
-                else:
-                    st.error("❌ 金鑰無效，請重新確認")
-            else:
-                st.warning("⚠️ 請先輸入 API 金鑰")
-
+        if st.session_state.remember_api and st.session_state.api_key:
+            api_key_input = st.session_state.api_key
+            st.success("✅ 已使用儲存的 API Key")
+        else:
+            api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
+        if api_key_input and api_key_input != st.session_state.api_key:
+            st.session_state.api_key = api_key_input
+    if st.session_state.api_key:
+        try:
+            genai.configure(api_key=st.session_state.api_key)
+            model = genai.GenerativeModel("models/gemini-2.0-flash")
+        except Exception as e:
+            st.error(f"❌ API 金鑰驗證失敗：{e}")
+            st.stop()
+    else:
+        st.info("⚠️ 請在左側輸入 API 金鑰後使用。")
+        st.stop()
 
     uploaded_file = st.file_uploader("📁 上傳 CSV 檔案（Gemini 可讀取）", type="csv")
     if uploaded_file:
