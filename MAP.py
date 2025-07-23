@@ -142,6 +142,10 @@ if page == "不動產分析":
             st.markdown("## 📊 篩選後的不動產資料")
             st.write(f"共 {len(filtered_df)} 筆資料")
             st.dataframe(filtered_df)
+            chart_type = st.sidebar.selectbox(
+            "選擇圖表類型",
+            ["不動產價格趨勢分析", "交易筆數分布"]
+            )
             
             if chart_type == "不動產價格趨勢分析":
                 if len(filtered_df) > 0:
