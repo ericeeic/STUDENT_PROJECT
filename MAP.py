@@ -156,7 +156,12 @@ if page == "不動產分析":
                     old_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
                     new_house_data.append(int(new_avg.iloc[0]) if len(new_avg) > 0 else 0)
                     old_house_data.append(int(old_avg.iloc[0]) if len(old_avg) > 0 else 0)
-
+                
+                chart_type = st.sidebar.selectbox(
+                    "選擇圖表類型",
+                    ["折線圖", "長條圖"]
+                )
+                
                 options = {
                     "title": {"text": "不動產價格趨勢分析"},
                     "tooltip": {"trigger": "axis"},
