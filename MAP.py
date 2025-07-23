@@ -4,19 +4,26 @@ from streamlit_folium import st_folium
 from streamlit_echarts import st_echarts
 import json
 import pandas as pd
-import matplotlib.pyplot as plt
 import google.generativeai as genai
+from dotenv import load_dotenv
+import os
 
-# ======= 側邊欄選頁 =======
+# 頁面設定
+st.set_page_config(page_title="台灣不動產與 Gemini 聊天室", layout="wide")
+
+# 頁面選擇
 page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"])
 
-# ==== 不動產分析頁 ====
-# ==== 不動產分析頁 ====
+# 共用 Session State 初始化
+def init_state(defaults):
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+# ---------------- 不動產分析頁 ----------------
 if page == "不動產分析":
-    st.set_page_config(page_title="台灣不動產分析", layout="wide")
     st.title("台灣地圖與不動產資料分析")
 
-    # 縣市與行政區座標
     city_coords = {
         "台北市": [25.0330, 121.5654],
         "新北市": [25.0169, 121.4628],
@@ -42,13 +49,7 @@ if page == "不動產分析":
     with open("district_coords.json", "r", encoding="utf-8") as f:
         district_coords = json.load(f)
 
-    # Session 狀態
-    if "selected_city" not in st.session_state:
-        st.session_state.selected_city = None
-    if "selected_district" not in st.session_state:
-        st.session_state.selected_district = None
-    if "show_filtered_data" not in st.session_state:
-        st.session_state.show_filtered_data = False
+    init_state({"selected_city": None, "selected_district": None, "show_filtered_data": False})
 
     def create_map(selected_city=None, selected_district=None):
         if selected_city and selected_district and selected_district in district_coords.get(selected_city, {}):
@@ -79,18 +80,16 @@ if page == "不動產分析":
 
         return m
 
-    # 合併不動產 CSV
-    file_names = [
-        "合併後不動產統計_11101.csv", "合併後不動產統計_11102.csv", "合併後不動產統計_11103.csv", "合併後不動產統計_11104.csv",
-        "合併後不動產統計_11201.csv", "合併後不動產統計_11202.csv", "合併後不動產統計_11203.csv", "合併後不動產統計_11204.csv",
-        "合併後不動產統計_11301.csv", "合併後不動產統計_11302.csv", "合併後不動產統計_11303.csv", "合併後不動產統計_11304.csv",
-        "合併後不動產統計_11401.csv", "合併後不動產統計_11402.csv"
-    ]
+    file_names = [f"合併後不動產統計_{y}.csv" for y in [
+        "11101", "11102", "11103", "11104",
+        "11201", "11202", "11203", "11204",
+        "11301", "11302", "11303", "11304",
+        "11401", "11402"
+    ]]
     dfs = [pd.read_csv(name) for name in file_names]
     combined_df = pd.concat(dfs, ignore_index=True)
 
     col1, col2 = st.columns([3, 1])
-
     with col2:
         st.write("### 縣市選擇")
         cities_per_row = 3
@@ -101,125 +100,89 @@ if page == "不動產分析":
                 if cols[idx].button(city):
                     st.session_state.selected_city = city
                     st.session_state.selected_district = None
-                    st.session_state.show_filtered_data = True  # 顯示資料
+                    st.session_state.show_filtered_data = True
 
         if st.session_state.selected_city:
             st.subheader(f"行政區：{st.session_state.selected_city}")
             districts = district_coords.get(st.session_state.selected_city, {})
-            district_names = list(districts.keys())
             district_names = ["全部的"] + list(districts.keys())
-            districts_per_row = 3
-            for i in range(0, len(district_names), districts_per_row):
-                row = st.columns(districts_per_row)
-                for j, name in enumerate(district_names[i:i + districts_per_row]):
+            for i in range(0, len(district_names), 3):
+                row = st.columns(3)
+                for j, name in enumerate(district_names[i:i + 3]):
                     if row[j].button(name):
-                        if name == "全部的":
-                            st.session_state.selected_district = None
-                        else:
-                            st.session_state.selected_district = name
-                        st.session_state.show_filtered_data = True  # 顯示資料
+                        st.session_state.selected_district = None if name == "全部的" else name
+                        st.session_state.show_filtered_data = True
 
             st.divider()
             if st.button("回到全台灣"):
                 st.session_state.selected_city = None
                 st.session_state.selected_district = None
-                st.session_state.show_filtered_data = False  # 隱藏資料
+                st.session_state.show_filtered_data = False
         else:
             st.info("請從右側選擇縣市查看行政區")
 
     with col1:
         map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
         st_folium(map_data, width=800, height=600)
-        
+
         if st.session_state.show_filtered_data:
             filtered_df = combined_df.copy()
             if st.session_state.selected_city:
                 filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
             if st.session_state.selected_district:
                 filtered_df = filtered_df[filtered_df["行政區"] == st.session_state.selected_district]
-            
+
             st.markdown("## 📊 篩選後的不動產資料")
             st.write(f"共 {len(filtered_df)} 筆資料")
             st.dataframe(filtered_df)
-            # 準備折線圖資料
+
             if len(filtered_df) > 0:
-                # 提取年份並按建物類型分組計算平均單價
-                filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911  # 民國轉西元
+                filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
                 yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
-                
-                # 取得所有年份
                 years = sorted(yearly_avg['年份'].unique())
                 year_labels = [str(year) for year in years]
-                
-                # 分別取得新成屋與中古屋的資料
+
                 new_house_data = []
                 old_house_data = []
-                
                 for year in years:
-                    new_house_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺']
-                    old_house_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
-                    
-                    new_house_data.append(int(new_house_avg.iloc[0]) if len(new_house_avg) > 0 else 0)
-                    old_house_data.append(int(old_house_avg.iloc[0]) if len(old_house_avg) > 0 else 0)
-                
-                # ECharts 配置
+                    new_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺']
+                    old_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
+                    new_house_data.append(int(new_avg.iloc[0]) if len(new_avg) > 0 else 0)
+                    old_house_data.append(int(old_avg.iloc[0]) if len(old_avg) > 0 else 0)
+
                 options = {
                     "title": {"text": "不動產價格趨勢分析"},
                     "tooltip": {"trigger": "axis"},
                     "legend": {"data": ["新成屋", "中古屋"]},
                     "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
                     "toolbox": {"feature": {"saveAsImage": {}}},
-                    "xAxis": {
-                        "type": "category",
-                        "boundaryGap": False,
-                        "data": year_labels,
-                    },
+                    "xAxis": {"type": "category", "boundaryGap": False, "data": year_labels},
                     "yAxis": {"type": "value", "name": "平均單價(元/平方公尺)"},
                     "series": [
-                        {
-                            "name": "新成屋",
-                            "type": "line",
-                            "data": new_house_data,
-                            "lineStyle": {"color": "#ff7f0e"},
-                            "itemStyle": {"color": "#ff7f0e"}
-                        },
-                        {
-                            "name": "中古屋",
-                            "type": "line", 
-                            "data": old_house_data,
-                            "lineStyle": {"color": "#1f77b4"},
-                            "itemStyle": {"color": "#1f77b4"}
-                        },
-                    ],
+                        {"name": "新成屋", "type": "line", "data": new_house_data,
+                         "lineStyle": {"color": "#ff7f0e"}, "itemStyle": {"color": "#ff7f0e"}},
+                        {"name": "中古屋", "type": "line", "data": old_house_data,
+                         "lineStyle": {"color": "#1f77b4"}, "itemStyle": {"color": "#1f77b4"}},
+                    ]
                 }
-                
                 st_echarts(options=options, height="400px")
-            
-            
-            
-# ==== Gemini 聊天室頁 ====
+
+# ---------------- Gemini 聊天室頁 ----------------
 elif page == "Gemini 聊天室":
-    st.set_page_config(page_title="Gemini 聊天室", layout="wide")
     st.title("🤖 Gemini AI 聊天室")
 
-    # Session State 初始化
-    _default_state = {
+    init_state({
         "api_key": "",
         "remember_api": False,
         "conversations": {},
         "topic_ids": [],
         "current_topic": "new",
-    }
-    for k, v in _default_state.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
+        "uploaded_df": None
+    })
 
-    # Sidebar API Key 輸入區
     with st.sidebar:
-        st.markdown("## 🔐 API 設定 ")
-        st.session_state.remember_api = st.checkbox(
-            "記住 API 金鑰", value=st.session_state.remember_api
-        )
+        st.markdown("## 🔐 API 設定")
+        st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
         if st.session_state.remember_api and st.session_state.api_key:
             api_key_input = st.session_state.api_key
             st.success("✅ 已使用儲存的 API Key")
@@ -228,64 +191,78 @@ elif page == "Gemini 聊天室":
         if api_key_input and api_key_input != st.session_state.api_key:
             st.session_state.api_key = api_key_input
 
-    # 初始化 Gemini
     if st.session_state.api_key:
         try:
             genai.configure(api_key=st.session_state.api_key)
-            MODEL_NAME = "models/gemini-1.5-flash"
-            model = genai.GenerativeModel(MODEL_NAME)
+            model = genai.GenerativeModel("models/gemini-2.0-flash")
         except Exception as e:
-            st.error(f"❌ 初始化 Gemini 失敗：{e}")
+            st.error(f"❌ API 金鑰驗證失敗：{e}")
             st.stop()
     else:
-        st.info("⚠️ 請在左側輸入 API 金鑰後開始使用。")
+        st.info("⚠️ 請在左側輸入 API 金鑰後使用。")
         st.stop()
 
-    # 主題列表
+    uploaded_file = st.file_uploader("📁 上傳 CSV 檔案（Gemini 可讀取）", type="csv")
+    if uploaded_file:
+        try:
+            st.session_state.uploaded_df = pd.read_csv(uploaded_file)
+            st.success("✅ 上傳成功，前幾列資料如下：")
+            st.dataframe(st.session_state.uploaded_df.head())
+        except Exception as e:
+            st.error(f"❌ 上傳錯誤：{e}")
+
     with st.sidebar:
         st.markdown("---")
-        st.markdown("## 💡 主題列表")
-        topic_options = ["new"] + st.session_state.topic_ids
-        selected_topic_id = st.radio(
-            "選擇主題以查看或開始對話：",
-            options=topic_options,
-            index=0 if st.session_state.current_topic == "new" else topic_options.index(st.session_state.current_topic),
-            format_func=lambda tid: "🆕 新對話" if tid == "new" else st.session_state.conversations[tid]["title"],
-            key="topic_selector",
-        )
-        st.session_state.current_topic = selected_topic_id
+        st.header("🗂️ 聊天紀錄")
+        if st.button("🆕 新對話"):
+            st.session_state.current_topic = "new"
+        for tid in st.session_state.topic_ids:
+            label = ("✔️ " if tid == st.session_state.current_topic else "") + st.session_state.conversations[tid]["title"]
+            if st.button(label, key=f"btn_{tid}"):
+                st.session_state.current_topic = tid
+        if st.button("🧹 清除所有紀錄"):
+            st.session_state.conversations.clear()
+            st.session_state.topic_ids.clear()
+            st.session_state.current_topic = "new"
 
-    # 輸入區
     with st.form("user_input_form", clear_on_submit=True):
-        user_input = st.text_input("你想問什麼？", placeholder="請輸入問題...")
+        user_input = st.text_input("你想問什麼？")
         submitted = st.form_submit_button("🚀 送出")
 
     if submitted and user_input:
-        with st.spinner("Gemini 正在思考中..."):
-            try:
-                response = model.generate_content(user_input)
-                answer = response.text.strip()
-            except Exception as e:
-                st.error(f"❌ 發生錯誤：{e}")
-                st.stop()
-
-        if st.session_state.current_topic == "new":
-            topic_title = user_input if len(user_input) <= 10 else user_input[:10] + "..."
-            topic_id = f"topic_{len(st.session_state.topic_ids) + 1}"
-
-            st.session_state.conversations[topic_id] = {
-                "title": topic_title,
-                "history": [{"user": user_input, "bot": answer}],
-            }
+        is_new = st.session_state.current_topic == "new"
+        if is_new:
+            topic_id = f"topic_{len(st.session_state.topic_ids)+1}"
+            st.session_state.conversations[topic_id] = {"title": "（產生主題中...）", "history": []}
             st.session_state.topic_ids.append(topic_id)
             st.session_state.current_topic = topic_id
         else:
-            st.session_state.conversations[st.session_state.current_topic]["history"].append({
-                "user": user_input,
-                "bot": answer
-            })
+            topic_id = st.session_state.current_topic
 
-    # 顯示對話紀錄
+        st.session_state.conversations[topic_id]["history"].append({"user": user_input, "bot": "⏳ 回覆生成中..."})
+
+        with st.spinner("Gemini 回覆中..."):
+            try:
+                if is_new:
+                    title_prompt = f"請為以下句子產生主題：「{user_input}」(不超過10字)"
+                    topic_title = model.generate_content(title_prompt).text.strip()[:10]
+                    st.session_state.conversations[topic_id]["title"] = topic_title
+                else:
+                    topic_title = st.session_state.conversations[topic_id]["title"]
+
+                prompt = f"主題為「{topic_title}」。\n使用者問題：「{user_input}」"
+                if st.session_state.uploaded_df is not None:
+                    csv_preview = st.session_state.uploaded_df.head(10).to_csv(index=False)
+                    prompt += f"\nCSV 資料：\n{csv_preview}"
+
+                answer = model.generate_content(prompt).text.strip()
+            except Exception as e:
+                answer = f"⚠️ 錯誤：{e}"
+                if is_new:
+                    st.session_state.conversations[topic_id]["title"] = "錯誤主題"
+
+        st.session_state.conversations[topic_id]["history"][-1]["bot"] = answer
+
     if st.session_state.current_topic != "new":
         conv = st.session_state.conversations[st.session_state.current_topic]
         for msg in reversed(conv["history"]):
