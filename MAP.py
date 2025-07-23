@@ -97,10 +97,6 @@ if page == "不動產分析":
     combined_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
     col1, col2 = st.columns([3, 1])
-    chart_type = st.sidebar.selectbox(
-    "選擇圖表類型",
-    ["不動產價格趨勢分析", "交易筆數分布"]
-    )
     with col2:
         st.write("### 縣市選擇")
         cities_per_row = 3
