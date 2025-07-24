@@ -15,17 +15,10 @@ st.set_page_config(page_title="台灣不動產與 Gemini 聊天室", layout="wid
 page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"], key="page")
 
 # 共用 Session State 初始化
-_default_state = {
-    "api_key": "",
-    "remember_api": False,
-    "conversations": {},        # {topic_id: {"title": str, "history": list[dict]} }
-    "topic_ids": [],            # 主題順序
-    "current_topic": "new",     # 預設為新對話
-    "uploaded_df": None,        # 上傳的 CSV DataFrame
-}
-for k, v in _default_state.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+def init_state(defaults):
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
 # ---------------- 不動產分析頁 ----------------
 if page == "不動產分析":
