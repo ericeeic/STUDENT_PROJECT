@@ -8,17 +8,73 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
+# 載入 .env（如有）
+load_dotenv()
+
 # 頁面設定
 st.set_page_config(page_title="台灣不動產與 Gemini 聊天室", layout="wide")
 
-# 頁面選擇
-page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"], key="page")
+# ============================================
+# Session State 初始化
+# ============================================
+_default_state = {
+    "api_key": "",
+    "remember_api": False,
+    "conversations": {},        # {topic_id: {"title": str, "history": list[dict]} }
+    "topic_ids": [],            # 主題順序
+    "current_topic": "new",     # 預設為新對話
+    "uploaded_df": None,        # 上傳的 CSV DataFrame
+    "selected_city": None,
+    "selected_district": None,
+    "show_filtered_data": False
+}
+for k, v in _default_state.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-# 共用 Session State 初始化
-def init_state(defaults):
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
+# ============================================
+# Sidebar ── API Key 區塊
+# ============================================
+with st.sidebar:
+    st.markdown("## 🔐 API 設定 ")
+
+    st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
+
+    if st.session_state.remember_api and st.session_state.api_key:
+        api_key_input = st.session_state.api_key
+        st.success("✅ 已使用儲存的 API Key")
+    else:
+        api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
+
+    if api_key_input and api_key_input != st.session_state.api_key:
+        st.session_state.api_key = api_key_input
+
+# ============================================
+# 驗證並初始化 Gemini 模型
+# ============================================
+model = None
+if st.session_state.api_key:
+    try:
+        genai.configure(api_key=st.session_state.api_key)
+        MODEL_NAME = "models/gemini-2.0-flash"
+        model = genai.GenerativeModel(MODEL_NAME)
+
+        # 使用簡單訊息來測試 API Key 是否有效
+        test_response = model.generate_content("Hello")
+        if test_response.text.strip() == "":
+            raise ValueError("API 回應為空，可能是無效金鑰")
+
+    except Exception as e:
+        st.error(f"❌ API 金鑰驗證失敗或無效：{e}")
+        st.stop()
+else:
+    st.info("⚠️ 請在左側輸入 API 金鑰後開始使用。")
+    st.stop()
+
+# ============================================
+# 頁面選擇
+# ============================================
+page = st.sidebar.selectbox("選擇頁面", ["不動產分析", "Gemini 聊天室"], key="page")
 
 # ---------------- 不動產分析頁 ----------------
 if page == "不動產分析":
