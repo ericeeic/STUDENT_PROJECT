@@ -188,7 +188,7 @@ if page == "不動產分析":
                                 model = genai.GenerativeModel("models/gemini-2.0-flash")
     
                                 # 將篩選資料取前10筆CSV字串當成 prompt 資料
-                                sample_text = filtered_df.head(10).to_csv(index=False, encoding="utf-8")
+                                sample_text = filtered_df.head(100).to_csv(index=False, encoding="utf-8")
                                 prompt = (
                                     "請根據以下台灣不動產資料，分析未來趨勢和重要觀察點：\n"
                                     f"{sample_text}\n"
@@ -277,7 +277,7 @@ if page == "不動產分析":
                                 model = genai.GenerativeModel("models/gemini-2.0-flash")
     
                                 # 將篩選資料取前10筆CSV字串當成 prompt 資料
-                                sample_text = filtered_df.head(10).to_csv(index=False, encoding="utf-8")
+                                sample_text = filtered_df.head(100).to_csv(index=False, encoding="utf-8")
                                 prompt = (
                                     "請根據以下台灣不動產資料，分析未來趨勢和重要觀察點：\n"
                                     f"{sample_text}\n"
