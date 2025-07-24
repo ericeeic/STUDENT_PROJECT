@@ -1,4 +1,3 @@
-請給我一個完整程式碼
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
