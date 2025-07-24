@@ -48,7 +48,7 @@ def verify_gemini_api():
 # - 只在需要 Gemini 的區塊呼叫即可
 
 # ---------------- Gemini 聊天室頁 ----------------
-    elif page == "Gemini 聊天室":
+   if page == "Gemini 聊天室":
         st.title("🤖 Gemini AI 聊天室")
 
         init_state({
