@@ -48,28 +48,28 @@ def verify_gemini_api():
 # - 只在需要 Gemini 的區塊呼叫即可
 
 # ---------------- Gemini 聊天室頁 ----------------
-elif page == "Gemini 聊天室":
-    st.title("🤖 Gemini AI 聊天室")
+    elif page == "Gemini 聊天室":
+        st.title("🤖 Gemini AI 聊天室")
 
-    init_state({
-        "api_key": "",
-        "remember_api": False,
-        "conversations": {},
-        "topic_ids": [],
-        "current_topic": "new",
-        "uploaded_df": None
-    })
+        init_state({
+            "api_key": "",
+            "remember_api": False,
+            "conversations": {},
+            "topic_ids": [],
+            "current_topic": "new",
+            "uploaded_df": None
+        })
 
-    with st.sidebar:
-        st.markdown("## 🔐 API 設定")
-        st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
-        if st.session_state.remember_api and st.session_state.api_key:
-            api_key_input = st.session_state.api_key
-            st.success("✅ 已使用儲存的 API Key")
-        else:
-            api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
-        if api_key_input and api_key_input != st.session_state.api_key:
-            st.session_state.api_key = api_key_input
+        with st.sidebar:
+            st.markdown("## 🔐 API 設定")
+            st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
+            if st.session_state.remember_api and st.session_state.api_key:
+                api_key_input = st.session_state.api_key
+                st.success("✅ 已使用儲存的 API Key")
+            else:
+                api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
+            if api_key_input and api_key_input != st.session_state.api_key:
+                st.session_state.api_key = api_key_input
 
     # 初始化模型
     model = verify_gemini_api()
