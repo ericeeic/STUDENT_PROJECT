@@ -21,6 +21,17 @@ def get_available_periods_from_moi():
         return []
 
     options = select.find_all("option")
+    periods = []
+    for opt in options:
+        val = opt.get("value", "")
+        m = re.match(r"(\d{3})S([1-4])", val)
+        if m:
+            year = m.group(1)
+            season = m.group(2)
+            periods.append(f"{year}0{season}")  # 轉成 5碼，例如11402
+    return sorted(periods)
+
+    options = select.find_all("option")
     return sorted(opt["value"] for opt in options if re.match(r"\d{5}", opt["value"]))
 
 def find_missing_periods(local_periods, web_periods):
