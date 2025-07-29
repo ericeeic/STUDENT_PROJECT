@@ -81,7 +81,7 @@ if page == "不動產分析":
                 ).add_to(m)
 
         return m
-
+'''
     # 載入多個 CSV，合併成一個 DataFrame（請確保檔案存在）
     file_names = [f"合併後不動產統計_{y}.csv" for y in [
         "11101", "11102", "11103", "11104",
@@ -96,6 +96,21 @@ if page == "不動產分析":
             dfs.append(df)
         except Exception as e:
             st.warning(f"無法讀取 {name}：{e}")
+    combined_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+    '''
+    folder = "./"  # 或你 CSV 檔案所在的資料夾路徑
+    
+    # 找出所有符合「合併後不動產統計_*.csv」的檔案
+    file_names = [f for f in os.listdir(folder) if f.startswith("合併後不動產統計_") and f.endswith(".csv")]
+    
+    dfs = []
+    for file in file_names:
+        try:
+            df = pd.read_csv(os.path.join(folder, file))
+            dfs.append(df)
+        except Exception as e:
+            print(f"讀取 {file} 失敗：{e}")
+    
     combined_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
     chart_type = st.sidebar.selectbox(
     "選擇圖表類型",
