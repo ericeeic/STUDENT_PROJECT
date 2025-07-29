@@ -1,3 +1,2 @@
-def auto_update(
-  print("hi")
-):
+def auto_update():
+
