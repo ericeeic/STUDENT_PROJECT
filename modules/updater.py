@@ -32,15 +32,3 @@ def check_missing_periods(folder="./"):
     missing = find_missing_periods(local, online)
     return local, online, missing
 
-def get_available_periods():
-    url = "https://plvr.land.moi.gov.tw/DownloadOpenData"  # 內政部下載頁
-    resp = requests.get(url)
-    soup = BeautifulSoup(resp.text, "html.parser")
-
-    select = soup.find("select", id="fileList")
-    if not select:
-        print("❌ 找不到 id 為 fileList 的下拉選單")
-        return []
-
-    options = select.find_all("option")
-    return [opt.text.strip() for opt in options if opt.get("value")]
