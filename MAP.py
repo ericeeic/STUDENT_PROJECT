@@ -341,7 +341,7 @@ if st.session_state.api_key:
             raise ValueError("API 回應為空，可能是無效金鑰")
 
     except Exception as e:
-        st.error(f"❌ API 金鑰驗證失敗或無效：{e}")
+        st.error(f"❌ API 金鑰驗證失敗或無效")
         st.stop()
 else:
     st.info("⚠️ 請在左側輸入 API 金鑰後開始使用。")
