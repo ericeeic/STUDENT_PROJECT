@@ -8,7 +8,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
-from modules.updater import auto_update
+from modules.updater import check_missing_periods
 
 # 頁面設定
 st.set_page_config(page_title="台灣不動產與 Gemini 聊天室", layout="wide")
