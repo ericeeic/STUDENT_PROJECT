@@ -16,7 +16,7 @@ def get_available_periods_from_moi():
     url = "https://plvr.land.moi.gov.tw/DownloadOpenData"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
-    select = soup.find("select", id="fileSel")
+    select = soup.find("select", id="historySeason_id")
     if not select:
         return []
 
