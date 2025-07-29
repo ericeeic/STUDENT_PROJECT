@@ -325,6 +325,11 @@ with st.sidebar:
 
     if api_key_input and api_key_input != st.session_state.api_key:
         st.session_state.api_key = api_key_input
+# ============================================
+# Sidebar ── 資料更新
+# ============================================
+with st.sidebar:
+    if st.button("一鍵更新至當前期數"):
 
 # ============================================
 # 驗證並初始化 Gemini 模型
