@@ -338,6 +338,7 @@ with st.sidebar:
             st.info(f"內政部目前共提供 {len(online)} 期資料")
             if missing:
                 st.warning(f"缺少以下期數：{', '.join(missing)}")
+                st.error("我還在改!")
             else:
                 st.success("恭喜，本地資料已是最新！")
 
