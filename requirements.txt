@@ -10,3 +10,4 @@ python-dotenv
 folium
 streamlit-folium
 streamlit_echarts
+beautifulsoup4
