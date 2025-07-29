@@ -98,7 +98,7 @@ if page == "不動產分析":
             st.warning(f"無法讀取 {name}：{e}")
     combined_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
     '''
-folder = "./"  # 或你 CSV 檔案所在的資料夾路徑
+    folder = "./"  # 或你 CSV 檔案所在的資料夾路徑
     
     # 找出所有符合「合併後不動產統計_*.csv」的檔案
     file_names = [f for f in os.listdir(folder) if f.startswith("合併後不動產統計_") and f.endswith(".csv")]
@@ -112,6 +112,7 @@ folder = "./"  # 或你 CSV 檔案所在的資料夾路徑
             print(f"讀取 {file} 失敗：{e}")
     
     combined_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+    
     chart_type = st.sidebar.selectbox(
     "選擇圖表類型",
     ["不動產價格趨勢分析", "交易筆數分布"]
