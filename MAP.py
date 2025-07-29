@@ -332,7 +332,14 @@ with st.sidebar:
 # ============================================
 with st.sidebar:
     if st.button("📥一鍵更新至當前期數"):
-        st.success("我正在更新唷~")
+        with st.spinner("正在更新中..."):
+            local, online, missing = check_missing_periods()
+            st.info(f"本地共有 {len(local)} 期資料")
+            st.info(f"內政部目前共提供 {len(online)} 期資料")
+            if missing:
+                st.warning(f"缺少以下期數：{', '.join(missing)}")
+            else:
+                st.success("恭喜，本地資料已是最新！")
 
 # ============================================
 # 驗證並初始化 Gemini 模型
