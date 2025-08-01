@@ -24,7 +24,7 @@ init_state({
     "remember_api": False,
     "conversations": {},
     "topic_ids": [],
-    "current_topic": "new"
+    "current_topic": None
 })
 
 with st.sidebar:
@@ -45,6 +45,13 @@ with st.sidebar:
                 st.warning(f"缺少以下期數：{', '.join(missing)}")
             else:
                 st.success("恭喜，本地資料已是最新！")
+
+    st.markdown("---")
+    st.markdown("## 💬 對話紀錄")
+    for tid in reversed(st.session_state.topic_ids):
+        label = st.session_state.conversations[tid]["title"]
+        if st.button(f"🗂️ {label}", key=f"sidebar_topic_{tid}"):
+            st.session_state.current_topic = tid
 
 city_coords = {
     "台北市": [25.0330, 121.5654],
@@ -158,7 +165,8 @@ with col1:
         st.write(f"共 {len(filtered_df)} 筆資料")
         st.dataframe(filtered_df)
 
-        # --- 圖表區塊 ---
+        # --- 圖表顯示區塊 ---
+        topic_title = f"{st.session_state.selected_city or '全台'} - {chart_type}"
         if chart_type == "不動產價格趨勢分析" and len(filtered_df) > 0:
             filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
             yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
@@ -202,34 +210,39 @@ with col1:
                 }
                 st_echarts(options, height="400px")
 
-        # --- Gemini 區塊 ---
-        if st.session_state.api_key and len(filtered_df) > 0:
+        if st.session_state.api_key:
             genai.configure(api_key=st.session_state.api_key)
             model = genai.GenerativeModel("models/gemini-2.0-flash")
-            sample_text = filtered_df.head(1000).to_csv(index=False, encoding="utf-8")
-            with st.spinner("Gemini 正在進行初步分析..."):
-                prompt = f"請根據以下台灣不動產資料，分析未來趨勢和觀察點：\n{sample_text}"
-                analysis = model.generate_content(prompt).text.strip()
-            st.markdown("### 🤖 Gemini AI 初步分析")
-            st.write(analysis)
-            topic_id = f"topic_{len(st.session_state.topic_ids)+1}"
-            st.session_state.topic_ids.append(topic_id)
-            st.session_state.current_topic = topic_id
-            st.session_state.conversations[topic_id] = {
-                "title": f"{st.session_state.selected_city or '全台'}-{chart_type}",
-                "history": [{"user": "請分析趨勢", "bot": analysis}]
-            }
-            with st.form(key="gemini_qa_form", clear_on_submit=True):
-                user_question = st.text_input("💬 想繼續問 Gemini 什麼？", placeholder="輸入後按 Enter...", key="follow_up_input")
+            sample_text = filtered_df.head(1000).to_csv(index=False)
+
+            if st.session_state.current_topic is None:
+                tid = f"topic_{len(st.session_state.topic_ids)+1}"
+                st.session_state.topic_ids.append(tid)
+                st.session_state.current_topic = tid
+                st.session_state.conversations[tid] = {
+                    "title": topic_title,
+                    "history": []
+                }
+
+            with st.form(key="gemini_chat_form", clear_on_submit=True):
+                user_input = st.text_input("🗣️ 請問 Gemini：", placeholder="請輸入問題...")
                 submitted = st.form_submit_button("送出")
-            if submitted and user_question:
-                try:
-                    follow_up_prompt = f"{sample_text}\n\n{user_question}"
-                    follow_up = model.generate_content(follow_up_prompt).text.strip()
-                    st.session_state.conversations[topic_id]["history"].append({"user": user_question, "bot": follow_up})
-                    st.markdown("### 🤖 Gemini 回覆")
-                    st.write(follow_up)
-                except Exception as e:
-                    st.error(f"Gemini 回覆錯誤：{e}")
-        elif not st.session_state.api_key:
-            st.info("請先輸入 API 金鑰才能使用 Gemini 分析功能。")
+
+            if submitted and user_input:
+                with st.spinner("Gemini 正在回覆中..."):
+                    full_prompt = f"{sample_text}\n\n{user_input}"
+                    try:
+                        reply = model.generate_content(full_prompt).text.strip()
+                        st.session_state.conversations[st.session_state.current_topic]["history"].append({"user": user_input, "bot": reply})
+                        st.success("回覆完成！")
+                    except Exception as e:
+                        st.error(f"錯誤：{e}")
+
+            conv = st.session_state.conversations[st.session_state.current_topic]
+            st.markdown(f"### 🧾 Gemini 對話紀錄 - {conv['title']}")
+            for entry in reversed(conv["history"]):
+                st.markdown(f"**👤 你：** {entry['user']}")
+                st.markdown(f"**🤖 Gemini：** {entry['bot']}")
+                st.markdown("---")
+        else:
+            st.info("請輸入 API 金鑰後開始分析與對話。")
