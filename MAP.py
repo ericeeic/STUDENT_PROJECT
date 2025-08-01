@@ -7,6 +7,7 @@ import pandas as pd
 import google.generativeai as genai
 import os
 from modules.updater import check_missing_periods
+from real_estate_merger_pro import main as process_season
 
 st.set_page_config(page_title="台灣不動產分析與 Gemini 對話", layout="wide")
 
@@ -34,17 +35,27 @@ with st.sidebar:
     if api_key_input and api_key_input != st.session_state.api_key:
         st.session_state.api_key = api_key_input
 
-    st.markdown("---")
-    st.markdown("## 📥 資料更新")
-    if st.button("一鍵更新至當前期數"):
-        with st.spinner("正在更新中..."):
-            local, online, missing = check_missing_periods()
-            st.info(f"本地共有 {len(local)} 期資料")
-            st.info(f"內政部目前共提供 {len(online)} 期資料")
-            if missing:
-                st.warning(f"缺少以下期數：{', '.join(missing)}")
-            else:
-                st.success("恭喜，本地資料已是最新！")
+st.markdown("---")
+st.markdown("## 📥 資料更新")
+
+if st.button("一鍵更新至當前期數"):
+    with st.spinner("正在更新中..."):
+        local, online, missing = check_missing_periods()
+        st.info(f"本地共有 {len(local)} 期資料")
+        st.info(f"內政部目前共提供 {len(online)} 期資料")
+
+        if missing:
+            st.warning(f"缺少以下期數：{', '.join(missing)}")
+            # 自動下載與處理缺失期數
+            for period in missing:
+                st.write(f"開始下載並處理期數：{period} ...")
+                try:
+                    process_season(period)
+                    st.success(f"完成期數 {period} 的資料更新")
+                except Exception as e:
+                    st.error(f"期數 {period} 更新失敗: {str(e)}")
+        else:
+            st.success("恭喜，本地資料已是最新！")
 
     st.markdown("---")
     st.markdown("## 💬 對話紀錄")
@@ -270,5 +281,6 @@ with col1:
                     st.markdown("---")
         else:
             st.info("請在左側輸入並保存 API 金鑰以使用 Gemini AI 功能。")
+
 
 
