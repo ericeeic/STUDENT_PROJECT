@@ -38,7 +38,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("## 📥 資料更新")
 
-'''    
+    '''    
     if st.button("一鍵更新至當前期數"):
         with st.spinner("正在更新中..."):
             local, online, missing = check_missing_periods()
@@ -57,7 +57,7 @@ with st.sidebar:
                         st.error(f"期數 {period} 更新失敗: {str(e)}")
             else:
                 st.success("恭喜，本地資料已是最新！")
-'''
+    '''
 
     if st.button("一鍵更新至當前期數"):
         with st.spinner("正在更新中..."):
@@ -302,6 +302,7 @@ with col1:
                     st.markdown("---")
         else:
             st.info("請在左側輸入並保存 API 金鑰以使用 Gemini AI 功能。")
+
 
 
 
