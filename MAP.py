@@ -9,6 +9,8 @@ import os
 from modules.updater import check_missing_periods
 from real_estate_merger_pro import main as process_season
 
+import traceback
+
 st.set_page_config(page_title="台灣不動產分析與 Gemini 對話", layout="wide")
 
 def init_state(defaults):
@@ -302,6 +304,7 @@ with col1:
                     st.markdown("---")
         else:
             st.info("請在左側輸入並保存 API 金鑰以使用 Gemini AI 功能。")
+
 
 
 
