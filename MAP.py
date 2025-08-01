@@ -37,7 +37,8 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("## 📥 資料更新")
-    
+
+'''    
     if st.button("一鍵更新至當前期數"):
         with st.spinner("正在更新中..."):
             local, online, missing = check_missing_periods()
@@ -54,6 +55,26 @@ with st.sidebar:
                         st.success(f"完成期數 {period} 的資料更新")
                     except Exception as e:
                         st.error(f"期數 {period} 更新失敗: {str(e)}")
+            else:
+                st.success("恭喜，本地資料已是最新！")
+'''
+
+    if st.button("一鍵更新至當前期數"):
+        with st.spinner("正在更新中..."):
+            local, online, missing = check_missing_periods()
+            st.info(f"本地共有 {len(local)} 期資料")
+            st.info(f"內政部目前共提供 {len(online)} 期資料")
+    
+            if missing:
+                st.warning(f"缺少以下期數：{', '.join(missing)}")
+                for period in missing:
+                    st.write(f"開始下載並處理期數：{period} ...")
+                    try:
+                        process_season(period)  # 或 process_season(period_to_seasoncode(period)) 如果需要轉換
+                        st.success(f"完成期數 {period} 的資料更新")
+                    except Exception as e:
+                        st.error(f"期數 {period} 更新失敗: {str(e)}")
+                        st.text(traceback.format_exc())
             else:
                 st.success("恭喜，本地資料已是最新！")
 
@@ -281,6 +302,7 @@ with col1:
                     st.markdown("---")
         else:
             st.info("請在左側輸入並保存 API 金鑰以使用 Gemini AI 功能。")
+
 
 
 
