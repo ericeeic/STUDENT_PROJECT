@@ -4,6 +4,9 @@ import zipfile
 import pandas as pd
 import glob
 
+import base64
+import json
+
 # 你的城市對照表和 classify_building_age 函式保持不變
 city_code_map = {
     "a": "台北市", "b": "台中市", "c": "基隆市", "d": "台南市", "e": "高雄市",
@@ -12,6 +15,67 @@ city_code_map = {
     "p": "雲林縣", "q": "嘉義縣", "t": "屏東縣",
     "u": "花蓮縣", "v": "台東縣", "w": "金門縣", "x": "澎湖縣", "z": "連江縣"
 }
+
+def github_push_file(repo_owner, repo_name, branch, file_path, commit_message, github_token):
+    """
+    將本地檔案推送（新增或更新）到 GitHub repo。
+    
+    參數:
+    - repo_owner: GitHub 擁有者帳號或組織名
+    - repo_name: 倉庫名
+    - branch: 要推送的分支名稱
+    - file_path: 本地檔案路徑
+    - commit_message: Commit 訊息
+    - github_token: GitHub Personal Access Token
+    """
+    # 目標 repo 的 API URL 路徑
+    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents/{os.path.basename(file_path)}"
+    
+    # 先取得該檔案是否已存在(拿 SHA)
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github+json"
+    }
+    
+    params = {
+        "ref": branch
+    }
+    
+    response = requests.get(api_url, headers=headers, params=params)
+    
+    if response.status_code == 200:
+        # 檔案存在，取得 sha
+        sha = response.json()["sha"]
+    elif response.status_code == 404:
+        # 檔案不存在，sha None
+        sha = None
+    else:
+        print(f"取得檔案資訊失敗，狀態碼: {response.status_code}")
+        print(response.text)
+        return False
+    
+    # 讀取檔案並 base64 encode
+    with open(file_path, "rb") as f:
+        content = f.read()
+    content_b64 = base64.b64encode(content).decode()
+    
+    data = {
+        "message": commit_message,
+        "content": content_b64,
+        "branch": branch,
+    }
+    if sha:
+        data["sha"] = sha
+    
+    put_resp = requests.put(api_url, headers=headers, data=json.dumps(data))
+    
+    if put_resp.status_code in [200, 201]:
+        print(f"成功推送檔案到 GitHub: {file_path}")
+        return True
+    else:
+        print(f"推送失敗，狀態碼: {put_resp.status_code}")
+        print(put_resp.text)
+        return False
 
 def classify_building_age(age):
     if pd.isna(age):
@@ -160,3 +224,4 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
