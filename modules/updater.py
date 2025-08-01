@@ -59,3 +59,7 @@ def check_missing_periods(folder="./"):
     missing = find_missing_periods(local, online)
 
     return local, online, missing
+
+def find_missing_periods(local_periods, web_periods):
+    """找出缺少的期數"""
+    return sorted(set(web_periods) - set(local_periods))
