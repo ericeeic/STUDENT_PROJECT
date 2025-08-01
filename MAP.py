@@ -163,90 +163,39 @@ with col1:
         st.write(f"共 {len(filtered_df)} 筆資料")
         st.dataframe(filtered_df)
 
-        if chart_type == "不動產價格趨勢分析":
-            filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
-            yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
-            years = sorted(yearly_avg['年份'].unique())
-            year_labels = [str(year) for year in years]
-            new_house_data = []
-            old_house_data = []
-            for year in years:
-                new_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺']
-                old_avg = yearly_avg[(yearly_avg['年份'] == year) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺']
-                new_house_data.append(int(new_avg.iloc[0]) if len(new_avg) > 0 else 0)
-                old_house_data.append(int(old_avg.iloc[0]) if len(old_avg) > 0 else 0)
+        if st.session_state.api_key and len(filtered_df) > 0:
+            genai.configure(api_key=st.session_state.api_key)
+            model = genai.GenerativeModel("models/gemini-2.0-flash")
+            sample_text = filtered_df.head(1000).to_csv(index=False, encoding="utf-8")
 
-            options = {
-                "title": {"text": "不動產價格趨勢分析"},
-                "tooltip": {"trigger": "axis"},
-                "legend": {"data": ["新成屋", "中古屋"]},
-                "xAxis": {"type": "category", "data": year_labels},
-                "yAxis": {"type": "value"},
-                "series": [
-                    {"name": "新成屋", "type": "line", "data": new_house_data},
-                    {"name": "中古屋", "type": "line", "data": old_house_data},
-                ]
+            with st.spinner("Gemini 正在進行初步分析..."):
+                prompt = f"請根據以下台灣不動產資料，分析未來趨勢和觀察點：\n{sample_text}"
+                analysis = model.generate_content(prompt).text.strip()
+
+            st.markdown("### 🤖 Gemini AI 初步分析")
+            st.write(analysis)
+
+            topic_id = f"topic_{len(st.session_state.topic_ids)+1}"
+            st.session_state.topic_ids.append(topic_id)
+            st.session_state.current_topic = topic_id
+            st.session_state.conversations[topic_id] = {
+                "title": f"{st.session_state.selected_city or '全台'}-{chart_type}",
+                "history": [{"user": "請分析趨勢", "bot": analysis}]
             }
-            st_echarts(options=options, height="400px")
 
-        elif chart_type == "交易筆數分布":
-            if st.session_state.selected_city is None:
-                group_column = '縣市'
-                chart_title = "各縣市購房交易筆數分布"
-            else:
-                group_column = '行政區'
-                chart_title = f"{st.session_state.selected_city} 交易筆數分布"
-                if st.session_state.selected_district:
-                    chart_title = f"{st.session_state.selected_district} 交易筆數分布"
+            with st.form(key="gemini_qa_form", clear_on_submit=True):
+                user_question = st.text_input("💬 想繼續問 Gemini 什麼？", placeholder="輸入後按 Enter...", key="follow_up_input")
+                submitted = st.form_submit_button("送出")
 
-            if group_column in filtered_df.columns:
-                has_transaction = '交易筆數' in filtered_df.columns
-                if has_transaction:
-                    counts = filtered_df.groupby(group_column)['交易筆數'].sum().reset_index()
-                else:
-                    counts = filtered_df.groupby(group_column).size().reset_index(name='交易筆數')
+            if submitted and user_question:
+                try:
+                    follow_up_prompt = f"{sample_text}\n\n{user_question}"
+                    follow_up = model.generate_content(follow_up_prompt).text.strip()
+                    st.session_state.conversations[topic_id]["history"].append({"user": user_question, "bot": follow_up})
+                    st.markdown("### 🤖 Gemini 回覆")
+                    st.write(follow_up)
+                except Exception as e:
+                    st.error(f"Gemini 回覆錯誤：{e}")
 
-                pie_data = [
-                    {"value": int(row["交易筆數"]), "name": row[group_column]}
-                    for _, row in counts.iterrows()
-                ]
-                pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
-                options = {
-                    "title": {"text": chart_title, "left": "center"},
-                    "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
-                    "series": [{"name": "交易筆數", "type": "pie", "radius": "50%", "data": pie_data}]
-                }
-                st_echarts(options=options, height="500px")
-
-        # Gemini 分析與互動對話
-        if st.session_state.api_key:
-            if st.button("📈 分析並開始 Gemini 對話"):
-                with st.spinner("Gemini 正在分析與初始化對話..."):
-                    try:
-                        genai.configure(api_key=st.session_state.api_key)
-                        model = genai.GenerativeModel("models/gemini-2.0-flash")
-                        sample_text = filtered_df.head(1000).to_csv(index=False, encoding="utf-8")
-                        prompt = f"請根據以下台灣不動產資料，分析未來趨勢：\n{sample_text}"
-                        analysis = model.generate_content(prompt).text.strip()
-                        st.markdown("### 🤖 Gemini AI 初步分析")
-                        st.write(analysis)
-
-                        topic_id = f"topic_{len(st.session_state.topic_ids)+1}"
-                        st.session_state.topic_ids.append(topic_id)
-                        st.session_state.current_topic = topic_id
-                        st.session_state.conversations[topic_id] = {
-                            "title": f"{st.session_state.selected_city or '全台'}-{chart_type}",
-                            "history": [{"user": "請分析趨勢", "bot": analysis}]
-                        }
-
-                        user_question = st.text_input("你想繼續問 Gemini 什麼？", key="follow_up")
-                        if user_question:
-                            full_prompt = f"{sample_text}\n\n{user_question}"
-                            follow_up = model.generate_content(full_prompt).text.strip()
-                            st.session_state.conversations[topic_id]["history"].append({"user": user_question, "bot": follow_up})
-                            st.markdown("### 🤖 Gemini 回覆")
-                            st.write(follow_up)
-                    except Exception as e:
-                        st.error(f"Gemini 錯誤：{e}")
-        else:
+        elif not st.session_state.api_key:
             st.info("請先輸入 API 金鑰才能使用 Gemini 分析功能。")
