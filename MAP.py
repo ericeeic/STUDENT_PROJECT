@@ -9,10 +9,8 @@ from dotenv import load_dotenv
 import os
 from modules.updater import check_missing_periods
 
-# 頁面設定
 st.set_page_config(page_title="台灣不動產分析與 Gemini 對話", layout="wide")
 
-# 初始化 Session State
 def init_state(defaults):
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -29,7 +27,6 @@ init_state({
     "current_topic": "new"
 })
 
-# Sidebar ── API Key 與資料更新
 with st.sidebar:
     st.markdown("## 🔐 API 設定")
     st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
@@ -49,7 +46,6 @@ with st.sidebar:
             else:
                 st.success("恭喜，本地資料已是最新！")
 
-# 地圖與城市座標
 city_coords = {
     "台北市": [25.0330, 121.5654],
     "新北市": [25.0169, 121.4628],
@@ -86,7 +82,6 @@ for file in file_names:
         print(f"讀取 {file} 失敗：{e}")
 combined_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-# 主畫面內容
 st.title("台灣地圖與不動產資料分析")
 
 chart_type = st.sidebar.selectbox("選擇圖表類型", ["不動產價格趨勢分析", "交易筆數分布"])
@@ -163,18 +158,60 @@ with col1:
         st.write(f"共 {len(filtered_df)} 筆資料")
         st.dataframe(filtered_df)
 
+        # --- 圖表區塊 ---
+        if chart_type == "不動產價格趨勢分析" and len(filtered_df) > 0:
+            filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
+            yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
+            years = sorted(yearly_avg['年份'].unique())
+            year_labels = [str(year) for year in years]
+            new_house_data = [int(yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺'].values[0]) if not yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '新成屋')].empty else 0 for y in years]
+            old_house_data = [int(yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺'].values[0]) if not yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '中古屋')].empty else 0 for y in years]
+
+            options = {
+                "title": {"text": "不動產價格趨勢分析"},
+                "tooltip": {"trigger": "axis"},
+                "legend": {"data": ["新成屋", "中古屋"]},
+                "xAxis": {"type": "category", "data": year_labels},
+                "yAxis": {"type": "value"},
+                "series": [
+                    {"name": "新成屋", "type": "line", "data": new_house_data},
+                    {"name": "中古屋", "type": "line", "data": old_house_data},
+                ]
+            }
+            st_echarts(options, height="400px")
+
+        elif chart_type == "交易筆數分布" and len(filtered_df) > 0:
+            group_column = "縣市" if st.session_state.selected_city is None else "行政區"
+            if group_column in filtered_df.columns:
+                if '交易筆數' in filtered_df.columns:
+                    counts = filtered_df.groupby(group_column)['交易筆數'].sum().reset_index()
+                else:
+                    counts = filtered_df.groupby(group_column).size().reset_index(name='交易筆數')
+                pie_data = [{"value": int(row["交易筆數"]), "name": row[group_column]} for _, row in counts.iterrows()]
+                pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
+                options = {
+                    "title": {"text": "交易筆數分布", "left": "center"},
+                    "tooltip": {"trigger": "item"},
+                    "legend": {"orient": "vertical", "left": "left"},
+                    "series": [{
+                        "name": "交易筆數",
+                        "type": "pie",
+                        "radius": "50%",
+                        "data": pie_data
+                    }]
+                }
+                st_echarts(options, height="400px")
+
+        # --- Gemini 區塊 ---
         if st.session_state.api_key and len(filtered_df) > 0:
             genai.configure(api_key=st.session_state.api_key)
             model = genai.GenerativeModel("models/gemini-2.0-flash")
             sample_text = filtered_df.head(1000).to_csv(index=False, encoding="utf-8")
-
             with st.spinner("Gemini 正在進行初步分析..."):
                 prompt = f"請根據以下台灣不動產資料，分析未來趨勢和觀察點：\n{sample_text}"
                 analysis = model.generate_content(prompt).text.strip()
-
             st.markdown("### 🤖 Gemini AI 初步分析")
             st.write(analysis)
-
             topic_id = f"topic_{len(st.session_state.topic_ids)+1}"
             st.session_state.topic_ids.append(topic_id)
             st.session_state.current_topic = topic_id
@@ -182,11 +219,9 @@ with col1:
                 "title": f"{st.session_state.selected_city or '全台'}-{chart_type}",
                 "history": [{"user": "請分析趨勢", "bot": analysis}]
             }
-
             with st.form(key="gemini_qa_form", clear_on_submit=True):
                 user_question = st.text_input("💬 想繼續問 Gemini 什麼？", placeholder="輸入後按 Enter...", key="follow_up_input")
                 submitted = st.form_submit_button("送出")
-
             if submitted and user_question:
                 try:
                     follow_up_prompt = f"{sample_text}\n\n{user_question}"
@@ -196,6 +231,5 @@ with col1:
                     st.write(follow_up)
                 except Exception as e:
                     st.error(f"Gemini 回覆錯誤：{e}")
-
         elif not st.session_state.api_key:
             st.info("請先輸入 API 金鑰才能使用 Gemini 分析功能。")
