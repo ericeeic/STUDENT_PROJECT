@@ -44,6 +44,18 @@ def convert_season_code_input(season_code: str) -> str:
             return f"{year}S{int(quarter)}"
     return season_code  # 若已是正確格式或格式不符則不變動
 
+
+def convert_season_code_for_export(season_code: str) -> str:
+    """
+    將 S 格式轉換為 0 格式，用於檔名
+    例如：114S1 -> 11401, 114S2 -> 11402
+    """
+    if len(season_code) == 5 and season_code[3] == 'S':
+        year = season_code[:3]
+        quarter = season_code[-1]
+        return f"{year}0{quarter}"
+    return season_code
+
 def github_push_file(repo_owner, repo_name, branch, file_path, commit_message, github_token):
     """
     將本地檔案推送（新增或更新）到 GitHub repo。
@@ -237,7 +249,8 @@ def main(season_code):
         result['季度'] = [quarter_str] * len(result)
 
         os.makedirs("output", exist_ok=True)
-        output_file = f"./output/合併後不動產統計_{season_code_2}.csv"
+        export_season_code = convert_season_code_for_export(season_code_2)
+        output_file = f"./output/合併後不動產統計_{export_season_code}.csv"
         result.to_csv(output_file, index=False, encoding='utf-8-sig')
         print(f"📄 統計完成，已輸出: {output_file}")
 
@@ -257,6 +270,7 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
 
