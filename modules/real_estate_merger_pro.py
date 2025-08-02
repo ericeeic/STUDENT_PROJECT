@@ -220,9 +220,10 @@ def main(season_code):
         print(f"📄 統計完成，已輸出: {output_file}")
 
         # =============== 新增：推送到 GitHub ===============
-        repo_owner = "你的GitHub帳號"              # ✅ 請改成你自己的
-        repo_name = "你的Repo名稱"                 # ✅ 請改成你自己的
+        repo_owner = "ericeeic"              # ✅ 請改成你自己的
+        repo_name = "STUDENT_PROJECT"                 # ✅ 請改成你自己的
         branch = "main"                            # ✅ 通常是 main
+        file_path = f"合併後不動產統計_{season_code}.csv"
         commit_message = f"更新統計資料 {season_code}"
         github_token = os.environ.get("GITHUB_TOKEN")
 
@@ -238,5 +239,6 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
