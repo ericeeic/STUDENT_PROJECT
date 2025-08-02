@@ -45,7 +45,7 @@ def get_available_periods_from_moi():
             if match:
                 year = match.group(1)
                 season = match.group(2)
-                periods.append(f"{year}S{season}")  # 轉成 5碼格式
+                periods.append(f"{year}0{season}")  # 轉成 5碼格式
         
         return sorted(periods)
         
