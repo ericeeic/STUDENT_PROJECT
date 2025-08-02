@@ -225,26 +225,26 @@ def process_real_estate_data(data_folder_path):
     return result_df
 
 def main(season_code):
-    season_code = convert_season_code_input(season_code)  # 加這行做轉換
+    season_code_2 = convert_season_code_input(season_code)  # 加這行做轉換
 
-    zip_path = download_zip(season_code)
-    extract_to = f"./data/lvr_landcsv_{season_code}"
+    zip_path = download_zip(season_code_2)
+    extract_to = f"./data/lvr_landcsv_{season_code_2}"
     unzip_file(zip_path, extract_to)
 
     result = process_real_estate_data(extract_to)
     if result is not None:
-        quarter_str = season_code_to_chinese_quarter(season_code)
+        quarter_str = season_code_to_chinese_quarter(season_code_2)
         result['季度'] = [quarter_str] * len(result)
 
         os.makedirs("output", exist_ok=True)
-        output_file = f"./output/合併後不動產統計_{season_code}.csv"
+        output_file = f"./output/合併後不動產統計_{season_code_2}.csv"
         result.to_csv(output_file, index=False, encoding='utf-8-sig')
         print(f"📄 統計完成，已輸出: {output_file}")
 
         repo_owner = "ericeeic"
         repo_name = "STUDENT_PROJECT"
         branch = "main"
-        commit_message = f"更新統計資料 {season_code}"
+        commit_message = f"更新統計資料 {season_code_2}"
         github_token = os.environ.get("GITHUB_TOKEN")
 
         if github_token:
@@ -257,6 +257,7 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
 
