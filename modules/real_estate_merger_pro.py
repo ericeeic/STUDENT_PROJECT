@@ -16,6 +16,17 @@ city_code_map = {
     "u": "花蓮縣", "v": "台東縣", "w": "金門縣", "x": "澎湖縣", "z": "連江縣"
 }
 
+def classify_building_age(age):
+    if pd.isna(age):
+        return None
+    age = float(age)
+    if age == 0:
+        return "預售屋"
+    elif 0 < age <= 5:
+        return "新成屋"
+    else:
+        return "中古屋"
+
 def season_code_to_chinese_quarter(season_code):
     if len(season_code) == 5 and season_code[3] == 'S':
         year = season_code[:3]
@@ -23,6 +34,15 @@ def season_code_to_chinese_quarter(season_code):
         quarter = quarter_map.get(season_code[-1], '未知季度')
         return f"{year}年{quarter}"
     return "未知季度"
+
+def convert_season_code_input(season_code: str) -> str:
+    # 將 11401 -> 114S1 的格式
+    if len(season_code) == 5 and season_code.isdigit():
+        year = season_code[:3]
+        quarter = season_code[3:]
+        if quarter in ['01', '02', '03', '04']:
+            return f"{year}S{int(quarter)}"
+    return season_code  # 若已是正確格式或格式不符則不變動
 
 def github_push_file(repo_owner, repo_name, branch, file_path, commit_message, github_token):
     """
@@ -84,17 +104,6 @@ def github_push_file(repo_owner, repo_name, branch, file_path, commit_message, g
         print(f"推送失敗，狀態碼: {put_resp.status_code}")
         print(put_resp.text)
         return False
-
-def classify_building_age(age):
-    if pd.isna(age):
-        return None
-    age = float(age)
-    if age == 0:
-        return "預售屋"
-    elif 0 < age <= 5:
-        return "新成屋"
-    else:
-        return "中古屋"
 
 def download_zip(season_code):
     base_url = "https://plvr.land.moi.gov.tw/DownloadSeason"
@@ -215,15 +224,6 @@ def process_real_estate_data(data_folder_path):
     result_df = result_df.reset_index()
     return result_df
 
-def convert_season_code_input(season_code: str) -> str:
-    # 將 11401 -> 114S1 的格式
-    if len(season_code) == 5 and season_code.isdigit():
-        year = season_code[:3]
-        quarter = season_code[3:]
-        if quarter in ['01', '02', '03', '04']:
-            return f"{year}S{int(quarter)}"
-    return season_code  # 若已是正確格式或格式不符則不變動
-
 def main(season_code):
     season_code = convert_season_code_input(season_code)  # 加這行做轉換
 
@@ -258,6 +258,7 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
 
