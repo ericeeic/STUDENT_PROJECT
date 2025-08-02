@@ -232,9 +232,9 @@ def main(season_code):
     
     result = process_real_estate_data(extract_to)
     if result is not None:
-        # 加季度欄
         quarter_str = season_code_to_chinese_quarter(season_code)
-        result['季度'] = quarter_str  # 新增欄位到最後一欄
+        # 正確加欄位，長度要跟result列數相同
+        result['季度'] = [quarter_str] * len(result)
         
         os.makedirs("output", exist_ok=True)
         export_season_code = convert_season_code_for_export(season_code)
@@ -242,11 +242,10 @@ def main(season_code):
         result.to_csv(output_file, index=False, encoding='utf-8-sig')
         print(f"📄 統計完成，已輸出: {output_file}")
 
-        # =============== 新增：推送到 GitHub ===============
-        repo_owner = "ericeeic"              # ✅ 請改成你自己的
-        repo_name = "STUDENT_PROJECT"                 # ✅ 請改成你自己的
-        branch = "main"                            # ✅ 通常是 main
-        file_path = f"合併後不動產統計_{export_season_code}.csv"
+        # 推送到 GitHub
+        repo_owner = "ericeeic"
+        repo_name = "STUDENT_PROJECT"
+        branch = "main"
         commit_message = f"更新統計資料 {season_code}"
         github_token = os.environ.get("GITHUB_TOKEN")
 
@@ -254,14 +253,13 @@ def main(season_code):
             github_push_file(repo_owner, repo_name, branch, output_file, commit_message, github_token)
         else:
             print("❌ 找不到 GITHUB_TOKEN，請確認是否有設定環境變數")
-        # ====================================================
     else:
         print("⚠️ 資料處理失敗")
-
 
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
 
