@@ -215,34 +215,33 @@ def process_real_estate_data(data_folder_path):
     result_df = result_df.reset_index()
     return result_df
 
-def convert_season_code_for_export(season_code: str) -> str:
-    # 把 "114S1" 轉成 "11401"
-    if 'S' in season_code:
+def convert_season_code_input(season_code: str) -> str:
+    # 將 11401 -> 114S1 的格式
+    if len(season_code) == 5 and season_code.isdigit():
         year = season_code[:3]
-        quarter = season_code[-1]
-        quarter_num = f"0{quarter}"
-        return f"{year}{quarter_num}"
-    else:
-        return season_code
+        quarter = season_code[3:]
+        if quarter in ['01', '02', '03', '04']:
+            return f"{year}S{int(quarter)}"
+    return season_code  # 若已是正確格式或格式不符則不變動
 
 def main(season_code):
+    season_code = convert_season_code_input(season_code)  # 加這行做轉換
+
     zip_path = download_zip(season_code)
     extract_to = f"./data/lvr_landcsv_{season_code}"
     unzip_file(zip_path, extract_to)
-    
+
     result = process_real_estate_data(extract_to)
     if result is not None:
         quarter_str = season_code_to_chinese_quarter(season_code)
-        # 正確加欄位，長度要跟result列數相同
         result['季度'] = [quarter_str] * len(result)
-        
+
         os.makedirs("output", exist_ok=True)
         export_season_code = convert_season_code_for_export(season_code)
         output_file = f"./output/合併後不動產統計_{export_season_code}.csv"
         result.to_csv(output_file, index=False, encoding='utf-8-sig')
         print(f"📄 統計完成，已輸出: {output_file}")
 
-        # 推送到 GitHub
         repo_owner = "ericeeic"
         repo_name = "STUDENT_PROJECT"
         branch = "main"
@@ -259,6 +258,7 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
 
