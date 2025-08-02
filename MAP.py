@@ -35,7 +35,7 @@ with st.sidebar:
     api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
     if api_key_input and api_key_input != st.session_state.api_key:
         st.session_state.api_key = api_key_input
-
+    '''
     st.markdown("---")
     st.markdown("## 📥 資料更新") 
     if st.button("一鍵更新至當前期數"):
@@ -56,7 +56,91 @@ with st.sidebar:
                         st.error(f"期數 {period} 更新失敗: {str(e)}")
             else:
                 st.success("恭喜，本地資料已是最新！")
-
+    '''
+    st.markdown("---")
+    st.markdown("## 📥 資料更新") 
+    
+    # 初始化 session state
+    if 'updating' not in st.session_state:
+        st.session_state.updating = False
+    if 'update_complete' not in st.session_state:
+        st.session_state.update_complete = False
+    if 'update_result' not in st.session_state:
+        st.session_state.update_result = None
+    
+    # 只有在沒有更新中時才顯示按鈕
+    if not st.session_state.updating and not st.session_state.update_complete:
+        if st.button("一鍵更新至當前期數"):
+            st.session_state.updating = True
+            st.rerun()
+    
+    # 如果正在更新中
+    if st.session_state.updating:
+        with st.spinner("正在檢查和更新資料..."):
+            try:
+                local, online, missing = check_missing_periods()
+                st.info(f"本地共有 {len(local)} 期資料")
+                st.info(f"內政部目前共提供 {len(online)} 期資料")
+                
+                if missing:
+                    st.warning(f"缺少以下期數：{', '.join(missing)}")
+                    
+                    # 建立進度條
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    success_count = 0
+                    failed_periods = []
+                    
+                    # 自動下載與處理缺失期數
+                    for i, period in enumerate(missing):
+                        status_text.text(f"正在處理期數：{period} ({i+1}/{len(missing)})")
+                        progress_bar.progress((i) / len(missing))
+                        
+                        try:
+                            process_season(period)
+                            success_count += 1
+                            st.success(f"✅ 完成期數 {period} 的資料更新")
+                        except Exception as e:
+                            failed_periods.append(period)
+                            st.error(f"❌ 期數 {period} 更新失敗: {str(e)}")
+                    
+                    # 完成進度條
+                    progress_bar.progress(1.0)
+                    status_text.text("更新完成！")
+                    
+                    # 設定結果
+                    if failed_periods:
+                        st.session_state.update_result = f"部分更新完成：成功 {success_count} 期，失敗 {len(failed_periods)} 期（{', '.join(failed_periods)}）"
+                    else:
+                        st.session_state.update_result = f"全部更新完成！成功處理 {success_count} 期資料"
+                else:
+                    st.session_state.update_result = "恭喜，本地資料已是最新！"
+                
+                st.session_state.updating = False
+                st.session_state.update_complete = True
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"更新過程發生錯誤: {str(e)}")
+                st.session_state.updating = False
+                st.rerun()
+    
+    # 顯示更新結果
+    if st.session_state.update_complete and st.session_state.update_result:
+        if "恭喜" in st.session_state.update_result:
+            st.success(st.session_state.update_result)
+        elif "全部更新完成" in st.session_state.update_result:
+            st.success(st.session_state.update_result)
+        else:
+            st.warning(st.session_state.update_result)
+        
+        # 重置按鈕
+        if st.button("重新檢查更新"):
+            st.session_state.updating = False
+            st.session_state.update_complete = False
+            st.session_state.update_result = None
+            st.rerun()    
     st.markdown("---")
     st.markdown("## 💬 對話紀錄")
     # 左側顯示對話主題列表，點擊切換
@@ -281,6 +365,7 @@ with col1:
                     st.markdown("---")
         else:
             st.info("請在左側輸入並保存 API 金鑰以使用 Gemini AI 功能。")
+
 
 
 
