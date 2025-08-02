@@ -16,6 +16,14 @@ city_code_map = {
     "u": "花蓮縣", "v": "台東縣", "w": "金門縣", "x": "澎湖縣", "z": "連江縣"
 }
 
+def season_code_to_chinese_quarter(season_code):
+    if len(season_code) == 5 and season_code[3] == 'S':
+        year = season_code[:3]
+        quarter_map = {'1': '第一季', '2': '第二季', '3': '第三季', '4': '第四季'}
+        quarter = quarter_map.get(season_code[-1], '未知季度')
+        return f"{year}年{quarter}"
+    return "未知季度"
+
 def github_push_file(repo_owner, repo_name, branch, file_path, commit_message, github_token):
     """
     將本地檔案推送（新增或更新）到 GitHub repo。
@@ -224,6 +232,10 @@ def main(season_code):
     
     result = process_real_estate_data(extract_to)
     if result is not None:
+        # 加季度欄
+        quarter_str = season_code_to_chinese_quarter(season_code)
+        result['季度'] = quarter_str  # 新增欄位到最後一欄
+        
         os.makedirs("output", exist_ok=True)
         export_season_code = convert_season_code_for_export(season_code)
         output_file = f"./output/合併後不動產統計_{export_season_code}.csv"
@@ -250,6 +262,7 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
 
