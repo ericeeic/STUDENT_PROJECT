@@ -226,7 +226,7 @@ def main(season_code):
     if result is not None:
         os.makedirs("output", exist_ok=True)
         export_season_code = convert_season_code_for_export(season_code)
-        output_file = f"./output/合併後不動產統計_{season_code}.csv"
+        output_file = f"./output/合併後不動產統計_{export_season_code}.csv"
         result.to_csv(output_file, index=False, encoding='utf-8-sig')
         print(f"📄 統計完成，已輸出: {output_file}")
 
@@ -250,6 +250,7 @@ def main(season_code):
 if __name__ == "__main__":
     season = input("請輸入欲下載的期數（例如：114S2）：").strip()
     main(season)
+
 
 
 
