@@ -24,8 +24,8 @@ if st.button("查詢"):
 
     geo_url = f"https://nominatim.openstreetmap.org/search?format=json&q={address}"
     headers = {
-        "User-Agent": " 地址周邊400公尺地點查詢 (pubg0984@gmail.com)",  # 官方建議包含 App 名稱和 email
-        "From": "pubg0984@gmail.com"
+        "User-Agent":"MY APP (pubg0984@gmail.com)",  # 官方建議包含 App 名稱和 email
+        "From":"pubg0984@gmail.com"
     }
 
     try:
@@ -88,3 +88,4 @@ if st.button("查詢"):
         html(map_html, height=500)
     else:
         st.error("無法解析該地址，請確認輸入正確。")
+
