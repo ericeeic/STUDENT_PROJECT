@@ -47,4 +47,40 @@ if st.button("查詢"):
             (
               node{tag}(around:400,{lat},{lng});
               way{tag}(around:400,{lat},{lng});
-              relation{tag}(ar
+              relation{tag}(around:400,{lat},{lng});
+            );
+            out center;
+            """
+            # 避免 Overpass API 被封鎖，也加延遲
+            time.sleep(1)
+            try:
+                res = requests.post(
+                    "https://overpass-api.de/api/interpreter",
+                    data=query.encode("utf-8"),
+                    headers=headers,
+                    timeout=20
+                )
+                data = res.json()
+            except requests.exceptions.RequestException as e:
+                st.warning(f"Overpass API 查詢 {t} 失敗: {e}")
+                continue
+            
+            for el in data.get("elements", []):
+                if "lat" in el and "lon" in el:
+                    name = el["tags"].get("name", "未命名")
+                    all_places.append((t, name))
+                    folium.Marker(
+                        [el["lat"], el["lon"]],
+                        popup=f"{t}: {name}",
+                        icon=folium.Icon(color="blue" if t != "醫院" else "green")
+                    ).add_to(m)
+        
+        st.subheader("查詢結果")
+        for t, name in all_places:
+            st.write(f"**{t}** - {name}")
+        
+        # 靜態渲染 Folium 地圖
+        map_html = m._repr_html_()
+        html(map_html, height=500)
+    else:
+        st.error("無法解析地址")
