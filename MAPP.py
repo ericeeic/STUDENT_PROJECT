@@ -58,9 +58,9 @@ if st.button("查詢"):
         query = f"""
         [out:json];
         (
-          node{tag}(around:400,{lat},{lng});
-          way{tag}(around:400,{lat},{lng});
-          relation{tag}(around:400,{lat},{lng});
+          node{tag}(around:200,{lat},{lng});
+          way{tag}(around:200,{lat},{lng});
+          relation{tag}(around:200,{lat},{lng});
         );
         out center;
         """
@@ -96,3 +96,4 @@ if st.button("查詢"):
 
     map_html = m._repr_html_()
     html(map_html, height=500)
+
