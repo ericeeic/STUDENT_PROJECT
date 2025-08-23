@@ -24,7 +24,7 @@ PLACE_TAGS = {
 
 st.title("🌍 地址周邊400公尺查詢 (OSM + OpenCage)")
 
-address = st.text_input("輸入地址", "台北101")
+address = st.text_input("輸入地址")
 selected_types = st.multiselect("選擇要查詢的類別", PLACE_TAGS.keys(), default=["超商", "交通"])
 
 if st.button("查詢"):
@@ -96,4 +96,5 @@ if st.button("查詢"):
 
     map_html = m._repr_html_()
     html(map_html, height=500)
+
 
