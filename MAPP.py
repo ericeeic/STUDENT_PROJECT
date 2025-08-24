@@ -5,7 +5,7 @@ import os
 from streamlit.components.v1 import html
 from dotenv import load_dotenv
 
-# 載入本地 .env（如果有的話）
+# 載入本地 .env
 load_dotenv()
 
 # 取得 OpenCage API Key
@@ -14,6 +14,7 @@ if not API_KEY:
     st.error("請先設定環境變數 OPENCAGE_API_KEY")
     st.stop()
 
+# 支援類別 (OSM tag)
 PLACE_TAGS = {
     "交通": '["public_transport"="stop_position"]',
     "超商": '["shop"="convenience"]',
@@ -40,6 +41,12 @@ PLACE_TAGS = {
         "皮膚護理": '["healthcare"="skin_care_clinic"]',
         "養生會館": '["leisure"="spa"]',
         "瑜珈教室": '["leisure"="yoga"]'
+    },
+
+    "建築物": {
+        "醫院建築": '["building"="hospital"]',
+        "學校建築": '["building"="school"]',
+        "住宅大樓": '["building"="apartments"]'
     }
 }
 
@@ -108,14 +115,21 @@ if st.button("查詢"):
             continue
 
         for el in data.get("elements", []):
+            # 建築物 way/relation 會有 center
             if "lat" in el and "lon" in el:
-                name = el["tags"].get("name", "未命名")
-                all_places.append((t, name))
-                folium.Marker(
-                    [el["lat"], el["lon"]],
-                    popup=f"{t}: {name}",
-                    icon=folium.Icon(color="blue" if t != "醫院" else "green")
-                ).add_to(m)
+                lat_el, lon_el = el["lat"], el["lon"]
+            elif "center" in el:
+                lat_el, lon_el = el["center"]["lat"], el["center"]["lon"]
+            else:
+                continue
+
+            name = el["tags"].get("name", "未命名")
+            all_places.append((t, name))
+            folium.Marker(
+                [lat_el, lon_el],
+                popup=f"{t}: {name}",
+                icon=folium.Icon(color="blue" if "醫院" not in t else "green")
+            ).add_to(m)
 
     # 4️⃣ 顯示結果與地圖
     st.subheader("查詢結果")
@@ -127,4 +141,3 @@ if st.button("查詢"):
 
     map_html = m._repr_html_()
     html(map_html, height=500)
-
