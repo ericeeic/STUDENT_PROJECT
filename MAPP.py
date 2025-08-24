@@ -14,12 +14,33 @@ if not API_KEY:
     st.error("請先設定環境變數 OPENCAGE_API_KEY")
     st.stop()
 
-PLACE_TAGS = {
+PLACE_TAGS = 
+{
     "交通": '["public_transport"="stop_position"]',
     "醫院": '["amenity"="hospital"]',
     "超商": '["shop"="convenience"]',
     "餐廳": '["amenity"="restaurant"]',
     "學校": '["amenity"="school"]'
+    "教育": {
+        "圖書館": '["amenity"="library"]',
+        "幼兒園": '["amenity"="kindergarten"]',
+        "小學": '["amenity"="school"]["school:level"="primary"]',
+        "中學": '["amenity"="school"]["school:level"="secondary"]',
+        "大學": '["amenity"="university"]'
+    },
+    "健康與保健": {
+        "脊骨神經科": '["healthcare"="chiropractor"]',
+        "牙科診所": '["healthcare"="dental_clinic"]',
+        "牙醫": '["amenity"="dentist"]',
+        "醫生": '["amenity"="doctors"]',
+        "藥局": '["amenity"="pharmacy"]',
+        "醫院": '["amenity"="hospital"]',
+        "醫學檢驗所": '["healthcare"="medical_lab"]',
+        "物理治療": '["healthcare"="physiotherapist"]',
+        "皮膚護理": '["healthcare"="skin_care_clinic"]',
+        "養生會館": '["leisure"="spa"]',
+        "瑜珈教室": '["leisure"="yoga"]'
+    }
 }
 
 st.title("🌍 地址周邊400公尺查詢 (OSM + OpenCage)")
@@ -96,5 +117,6 @@ if st.button("查詢"):
 
     map_html = m._repr_html_()
     html(map_html, height=500)
+
 
 
