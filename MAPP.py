@@ -14,13 +14,12 @@ if not API_KEY:
     st.error("請先設定環境變數 OPENCAGE_API_KEY")
     st.stop()
 
-PLACE_TAGS = 
-{
+PLACE_TAGS = {
     "交通": '["public_transport"="stop_position"]',
-    "醫院": '["amenity"="hospital"]',
     "超商": '["shop"="convenience"]',
     "餐廳": '["amenity"="restaurant"]',
-    "學校": '["amenity"="school"]'
+    "學校": '["amenity"="school"]',
+
     "教育": {
         "圖書館": '["amenity"="library"]',
         "幼兒園": '["amenity"="kindergarten"]',
@@ -28,6 +27,7 @@ PLACE_TAGS =
         "中學": '["amenity"="school"]["school:level"="secondary"]',
         "大學": '["amenity"="university"]'
     },
+
     "健康與保健": {
         "脊骨神經科": '["healthcare"="chiropractor"]',
         "牙科診所": '["healthcare"="dental_clinic"]',
@@ -46,10 +46,18 @@ PLACE_TAGS =
 st.title("🌍 地址周邊400公尺查詢 (OSM + OpenCage)")
 
 address = st.text_input("輸入地址")
-selected_types = st.multiselect("選擇要查詢的類別", PLACE_TAGS.keys(), default=["超商", "交通"])
+
+# 先選大類
+main_category = st.selectbox("選擇主分類", list(PLACE_TAGS.keys()))
+
+# 判斷有沒有子分類
+if isinstance(PLACE_TAGS[main_category], dict):
+    selected_types = st.multiselect("選擇細項", PLACE_TAGS[main_category].keys())
+else:
+    selected_types = [main_category]
 
 if st.button("查詢"):
-    # 1️⃣ 用 OpenCage Geocoder 轉經緯度
+    # 1️⃣ 轉換地址到經緯度 (OpenCage)
     geo_url = "https://api.opencagedata.com/geocode/v1/json"
     params = {
         "q": address,
@@ -73,9 +81,11 @@ if st.button("查詢"):
     m = folium.Map(location=[lat, lng], zoom_start=16)
     folium.Marker([lat, lng], popup="查詢中心", icon=folium.Icon(color="red")).add_to(m)
 
+    # 3️⃣ 查詢 Overpass
     all_places = []
-    for t in selected_types:
-        tag = PLACE_TAGS[t]
+    targets = selected_types if isinstance(PLACE_TAGS[main_category], dict) else [main_category]
+    for t in targets:
+        tag = PLACE_TAGS[main_category][t] if isinstance(PLACE_TAGS[main_category], dict) else PLACE_TAGS[t]
         query = f"""
         [out:json];
         (
@@ -107,7 +117,7 @@ if st.button("查詢"):
                     icon=folium.Icon(color="blue" if t != "醫院" else "green")
                 ).add_to(m)
 
-    # 3️⃣ 顯示結果與地圖
+    # 4️⃣ 顯示結果與地圖
     st.subheader("查詢結果")
     if all_places:
         for t, name in all_places:
@@ -117,6 +127,3 @@ if st.button("查詢"):
 
     map_html = m._repr_html_()
     html(map_html, height=500)
-
-
-
