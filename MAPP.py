@@ -25,7 +25,7 @@ if st.button("查詢"):
         st.stop()
 
     # 1️⃣ Google Geocoding API 轉換地址 → 經緯度
-    geo_url = f"https://maps.googleapis.com/maps/api/geocode/json"
+    geo_url = "https://maps.googleapis.com/maps/api/geocode/json"
     geo_params = {"address": address, "key": google_api_key, "language": "zh-TW"}
     geo_res = requests.get(geo_url, params=geo_params).json()
 
@@ -65,17 +65,30 @@ if st.button("查詢"):
     else:
         st.write("該範圍內無相關地點。")
 
-    # 4️⃣ 用 Google Maps JavaScript API 顯示地圖
+    # 4️⃣ 依類別設定 icon 顏色
+    icon_map = {
+        "交通": "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+        "醫院": "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+        "超商": "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        "餐廳": "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
+        "學校": "http://maps.google.com/mapfiles/ms/icons/purple-dot.png"
+    }
+
     markers_js = ""
     for t, name, p_lat, p_lng in all_places:
+        icon_url = icon_map.get(t, "http://maps.google.com/mapfiles/ms/icons/blue-dot.png")
         markers_js += f"""
         new google.maps.Marker({{
             position: {{lat: {p_lat}, lng: {p_lng}}},
             map: map,
-            title: "{t}: {name}"
+            title: "{t}: {name}",
+            icon: {{
+                url: "{icon_url}"
+            }}
         }});
         """
 
+    # 5️⃣ Google Maps 顯示
     map_html = f"""
     <div id="map" style="height:500px;"></div>
     <script>
@@ -85,11 +98,18 @@ if st.button("查詢"):
             zoom: 16,
             center: center
         }});
+
+        // 🔴 使用者輸入的地址標記
         new google.maps.Marker({{
             position: center,
             map: map,
-            title: "查詢中心"
+            title: "查詢中心",
+            icon: {{
+                url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+            }}
         }});
+
+        // 其他地點
         {markers_js}
     }}
     </script>
