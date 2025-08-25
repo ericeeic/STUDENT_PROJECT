@@ -1,145 +1,99 @@
 import streamlit as st
 import requests
-import folium
-import os
 from streamlit.components.v1 import html
-from dotenv import load_dotenv
 
-# 載入本地 .env
-load_dotenv()
+st.title("🌍 地址周邊400公尺查詢 (Google Maps + Places API)")
 
-# 取得 OpenCage API Key
-API_KEY = os.getenv("OPENCAGE_API_KEY")
-if not API_KEY:
-    st.error("請先設定環境變數 OPENCAGE_API_KEY")
-    st.stop()
+# 使用者手動輸入 Google API Key
+google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
+address = st.text_input("輸入地址")
+radius = 400  # 搜尋半徑（公尺）
 
-# 支援類別 (OSM tag)
-PLACE_TAGS = {
-    "交通": '["public_transport"="stop_position"]',
-    "超商": '["shop"="convenience"]',
-    "餐廳": '["amenity"="restaurant"]',
-    "學校": '["amenity"="school"]',
-
-    "教育": {
-        "圖書館": '["amenity"="library"]',
-        "幼兒園": '["amenity"="kindergarten"]',
-        "小學": '["amenity"="school"]["school:level"="primary"]',
-        "中學": '["amenity"="school"]["school:level"="secondary"]',
-        "大學": '["amenity"="university"]'
-    },
-
-    "健康與保健": {
-        "脊骨神經科": '["healthcare"="chiropractor"]',
-        "牙科診所": '["healthcare"="dental_clinic"]',
-        "牙醫": '["amenity"="dentist"]',
-        "醫生": '["amenity"="doctors"]',
-        "藥局": '["amenity"="pharmacy"]',
-        "醫院": '["amenity"="hospital"]',
-        "醫學檢驗所": '["healthcare"="medical_lab"]',
-        "物理治療": '["healthcare"="physiotherapist"]',
-        "皮膚護理": '["healthcare"="skin_care_clinic"]',
-        "養生會館": '["leisure"="spa"]',
-        "瑜珈教室": '["leisure"="yoga"]'
-    },
-
-    "建築物": {
-        "醫院建築": '["building"="hospital"]',
-        "學校建築": '["building"="school"]',
-        "住宅大樓": '["building"="apartments"]'
-    }
+PLACE_TYPES = {
+    "交通": "transit_station",
+    "醫院": "hospital",
+    "超商": "convenience_store",
+    "餐廳": "restaurant",
+    "學校": "school"
 }
 
-st.title("🌍 地址周邊400公尺查詢 (OSM + OpenCage)")
-
-address = st.text_input("輸入地址")
-
-# 先選大類
-main_category = st.selectbox("選擇主分類", list(PLACE_TAGS.keys()))
-
-# 判斷有沒有子分類
-if isinstance(PLACE_TAGS[main_category], dict):
-    selected_types = st.multiselect("選擇細項", PLACE_TAGS[main_category].keys())
-else:
-    selected_types = [main_category]
+selected_types = st.multiselect("選擇要查詢的類別", PLACE_TYPES.keys(), default=["超商", "交通"])
 
 if st.button("查詢"):
-    # 1️⃣ 轉換地址到經緯度 (OpenCage)
-    geo_url = "https://api.opencagedata.com/geocode/v1/json"
-    params = {
-        "q": address,
-        "key": API_KEY,
-        "language": "zh-TW",
-        "limit": 1
-    }
-    try:
-        geo_res = requests.get(geo_url, params=params, timeout=10).json()
-        if geo_res["results"]:
-            lat = geo_res["results"][0]["geometry"]["lat"]
-            lng = geo_res["results"][0]["geometry"]["lng"]
-        else:
-            st.error("無法解析該地址")
-            st.stop()
-    except requests.exceptions.RequestException as e:
-        st.error(f"無法連線到 OpenCage: {e}")
+    if not google_api_key:
+        st.error("請先輸入 Google Maps API Key")
         st.stop()
 
-    # 2️⃣ 建立 Folium 地圖
-    m = folium.Map(location=[lat, lng], zoom_start=16)
-    folium.Marker([lat, lng], popup="查詢中心", icon=folium.Icon(color="red")).add_to(m)
+    # 1️⃣ Google Geocoding API 轉換地址 → 經緯度
+    geo_url = f"https://maps.googleapis.com/maps/api/geocode/json"
+    geo_params = {"address": address, "key": google_api_key, "language": "zh-TW"}
+    geo_res = requests.get(geo_url, params=geo_params).json()
 
-    # 3️⃣ 查詢 Overpass
+    if geo_res.get("status") != "OK":
+        st.error("無法解析該地址")
+        st.stop()
+
+    location = geo_res["results"][0]["geometry"]["location"]
+    lat, lng = location["lat"], location["lng"]
+
     all_places = []
-    targets = selected_types if isinstance(PLACE_TAGS[main_category], dict) else [main_category]
-    for t in targets:
-        tag = PLACE_TAGS[main_category][t] if isinstance(PLACE_TAGS[main_category], dict) else PLACE_TAGS[t]
-        query = f"""
-        [out:json];
-        (
-          node{tag}(around:400,{lat},{lng});
-          way{tag}(around:400,{lat},{lng});
-          relation{tag}(around:400,{lat},{lng});
-        );
-        out center;
-        """
-        try:
-            res = requests.post(
-                "https://overpass-api.de/api/interpreter",
-                data=query.encode("utf-8"),
-                headers={"User-Agent": "StreamlitApp"},
-                timeout=20
-            )
-            data = res.json()
-        except requests.exceptions.RequestException as e:
-            st.warning(f"無法查詢 {t}: {e}")
-            continue
 
-        for el in data.get("elements", []):
-            # 建築物 way/relation 會有 center
-            if "lat" in el and "lon" in el:
-                lat_el, lon_el = el["lat"], el["lon"]
-            elif "center" in el:
-                lat_el, lon_el = el["center"]["lat"], el["center"]["lon"]
-            else:
-                continue
+    # 2️⃣ Google Places API 搜尋周邊地點
+    for t in selected_types:
+        place_type = PLACE_TYPES[t]
+        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        places_params = {
+            "location": f"{lat},{lng}",
+            "radius": radius,
+            "type": place_type,
+            "key": google_api_key,
+            "language": "zh-TW"
+        }
+        places_res = requests.get(places_url, params=places_params).json()
 
-            name = el["tags"].get("name", "未命名")
-            all_places.append((t, name))
-            folium.Marker(
-                [lat_el, lon_el],
-                popup=f"{t}: {name}",
-                icon=folium.Icon(color="blue" if "醫院" not in t else "green")
-            ).add_to(m)
+        for place in places_res.get("results", []):
+            name = place.get("name", "未命名")
+            p_lat = place["geometry"]["location"]["lat"]
+            p_lng = place["geometry"]["location"]["lng"]
+            all_places.append((t, name, p_lat, p_lng))
 
-    # 4️⃣ 顯示結果與地圖
+    # 3️⃣ 顯示查詢結果
     st.subheader("查詢結果")
     if all_places:
-        for t, name in all_places:
+        for t, name, _, _ in all_places:
             st.write(f"**{t}** - {name}")
     else:
         st.write("該範圍內無相關地點。")
 
-    map_html = m._repr_html_()
+    # 4️⃣ 用 Google Maps JavaScript API 顯示地圖
+    markers_js = ""
+    for t, name, p_lat, p_lng in all_places:
+        markers_js += f"""
+        new google.maps.Marker({{
+            position: {{lat: {p_lat}, lng: {p_lng}}},
+            map: map,
+            title: "{t}: {name}"
+        }});
+        """
+
+    map_html = f"""
+    <div id="map" style="height:500px;"></div>
+    <script>
+    function initMap() {{
+        var center = {{lat: {lat}, lng: {lng}}};
+        var map = new google.maps.Map(document.getElementById('map'), {{
+            zoom: 16,
+            center: center
+        }});
+        new google.maps.Marker({{
+            position: center,
+            map: map,
+            title: "查詢中心"
+        }});
+        {markers_js}
+    }}
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={google_api_key}&callback=initMap" async defer></script>
+    """
+
     html(map_html, height=500)
-
-
