@@ -70,8 +70,11 @@ if st.button("查詢"):
             dist = int(haversine(lat, lng, p_lat, p_lng))  # 四捨五入成整數公尺
             all_places.append((t, name, p_lat, p_lng, dist))
 
+    # **依距離排序**
+    all_places = sorted(all_places, key=lambda x: x[4])
+
     # 3️⃣ 顯示查詢結果
-    st.subheader("查詢結果")
+    st.subheader("查詢結果（由近到遠）")
     if all_places:
         for t, name, _, _, dist in all_places:
             st.write(f"**{t}** - {name} ({dist} 公尺)")
