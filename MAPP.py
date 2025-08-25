@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import math
 from streamlit.components.v1 import html
 
 st.title("🌍 地址周邊400公尺查詢 (Google Maps + Places API)")
@@ -18,6 +19,17 @@ PLACE_TYPES = {
 }
 
 selected_types = st.multiselect("選擇要查詢的類別", PLACE_TYPES.keys(), default=["超商", "交通"])
+
+# 計算經緯度距離（Haversine formula, 回傳公尺）
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000  # 地球半徑 (公尺)
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
+
+    a = math.sin(d_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(d_lambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c
 
 if st.button("查詢"):
     if not google_api_key:
@@ -55,13 +67,14 @@ if st.button("查詢"):
             name = place.get("name", "未命名")
             p_lat = place["geometry"]["location"]["lat"]
             p_lng = place["geometry"]["location"]["lng"]
-            all_places.append((t, name, p_lat, p_lng))
+            dist = int(haversine(lat, lng, p_lat, p_lng))  # 四捨五入成整數公尺
+            all_places.append((t, name, p_lat, p_lng, dist))
 
     # 3️⃣ 顯示查詢結果
     st.subheader("查詢結果")
     if all_places:
-        for t, name, _, _ in all_places:
-            st.write(f"**{t}** - {name}")
+        for t, name, _, _, dist in all_places:
+            st.write(f"**{t}** - {name} ({dist} 公尺)")
     else:
         st.write("該範圍內無相關地點。")
 
@@ -75,16 +88,22 @@ if st.button("查詢"):
     }
 
     markers_js = ""
-    for t, name, p_lat, p_lng in all_places:
+    for t, name, p_lat, p_lng, dist in all_places:
         icon_url = icon_map.get(t, "http://maps.google.com/mapfiles/ms/icons/blue-dot.png")
         markers_js += f"""
-        new google.maps.Marker({{
+        var marker = new google.maps.Marker({{
             position: {{lat: {p_lat}, lng: {p_lng}}},
             map: map,
             title: "{t}: {name}",
             icon: {{
                 url: "{icon_url}"
             }}
+        }});
+        var infowindow = new google.maps.InfoWindow({{
+            content: "{t}: {name}<br>距離中心 {dist} 公尺"
+        }});
+        marker.addListener("click", function() {{
+            infowindow.open(map, marker);
         }});
         """
 
