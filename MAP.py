@@ -1,354 +1,215 @@
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
-from streamlit_echarts import st_echarts
-import json
-import pandas as pd
-import google.generativeai as genai
-import os
-from modules.updater import check_missing_periods
-from modules.real_estate_merger_pro import main as process_season
+import requests
+import math
+from streamlit.components.v1 import html
 
+st.title("地址周邊400公尺查詢")
 
-st.set_page_config(page_title="台灣不動產分析與 Gemini 對話", layout="wide")
+# 使用者手動輸入 Google API Key
+google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
+address = st.text_input("輸入地址")
+radius = 600  # 搜尋半徑（公尺）
 
-def init_state(defaults):
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
-
-init_state({
-    "selected_city": None,
-    "selected_district": None,
-    "show_filtered_data": False,
-    "api_key": "",
-    "remember_api": False,
-    "conversations": {},
-    "topic_ids": [],
-    "current_topic": None,
-    "previous_topic_title": None,  # 新增用於追蹤上一次主題
-})
-
-with st.sidebar:
-    st.markdown("## 🔐 API 設定")
-    st.session_state.remember_api = st.checkbox("記住 API 金鑰", value=st.session_state.remember_api)
-    api_key_input = st.text_input("請輸入 Gemini API 金鑰", type="password")
-    if api_key_input and api_key_input != st.session_state.api_key:
-        st.session_state.api_key = api_key_input
-        
-    st.markdown("---")
-    st.markdown("## 📥 資料更新") 
-    
-    # 初始化 session state
-    if 'updating' not in st.session_state:
-        st.session_state.updating = False
-    if 'update_complete' not in st.session_state:
-        st.session_state.update_complete = False
-    if 'update_result' not in st.session_state:
-        st.session_state.update_result = None
-    
-    # 只有在沒有更新中時才顯示按鈕
-    if not st.session_state.updating and not st.session_state.update_complete:
-        if st.button("一鍵更新至當前期數"):
-            st.session_state.updating = True
-            st.rerun()
-    
-    # 如果正在更新中
-    if st.session_state.updating:
-        with st.spinner("正在檢查和更新資料..."):
-            try:
-                local, online, missing = check_missing_periods()
-                st.info(f"本地共有 {len(local)} 期資料")
-                st.info(f"內政部目前共提供 {len(online)} 期資料")
-                
-                if missing:
-                    st.warning(f"缺少以下期數：{', '.join(missing)}")
-                    
-                    # 建立進度條
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    success_count = 0
-                    failed_periods = []
-                    
-                    # 自動下載與處理缺失期數
-                    for i, period in enumerate(missing):
-                        status_text.text(f"正在處理期數：{period} ({i+1}/{len(missing)})")
-                        progress_bar.progress((i) / len(missing))
-                        
-                        try:
-                            process_season(period)
-                            success_count += 1
-                            st.success(f"✅ 完成期數 {period} 的資料更新")
-                        except Exception as e:
-                            failed_periods.append(period)
-                            st.error(f"❌ 期數 {period} 更新失敗: {str(e)}")
-                    
-                    # 完成進度條
-                    progress_bar.progress(1.0)
-                    status_text.text("更新完成！")
-                    
-                    # 設定結果
-                    if failed_periods:
-                        st.session_state.update_result = f"部分更新完成：成功 {success_count} 期，失敗 {len(failed_periods)} 期（{', '.join(failed_periods)}）"
-                    else:
-                        st.session_state.update_result = f"全部更新完成！成功處理 {success_count} 期資料"
-                else:
-                    st.session_state.update_result = "恭喜，本地資料已是最新！"
-                
-                st.session_state.updating = False
-                st.session_state.update_complete = True
-                st.rerun()
-                
-            except Exception as e:
-                st.error(f"更新過程發生錯誤: {str(e)}")
-                st.session_state.updating = False
-                st.rerun()
-    
-    # 顯示更新結果
-    if st.session_state.update_complete and st.session_state.update_result:
-        if "恭喜" in st.session_state.update_result:
-            st.success(st.session_state.update_result)
-        elif "全部更新完成" in st.session_state.update_result:
-            st.success(st.session_state.update_result)
-        else:
-            st.warning(st.session_state.update_result)
-        
-        # 重置按鈕
-        if st.button("重新檢查更新"):
-            st.session_state.updating = False
-            st.session_state.update_complete = False
-            st.session_state.update_result = None
-            st.rerun()    
-    st.markdown("---")
-    st.markdown("## 💬 對話紀錄")
-    # 左側顯示對話主題列表，點擊切換
-    for tid in reversed(st.session_state.topic_ids):
-        label = st.session_state.conversations[tid]["title"]
-        if st.button(f"🗂️ {label}", key=f"sidebar_topic_{tid}"):
-            st.session_state.current_topic = tid
-
-city_coords = {
-    "台北市": [25.0330, 121.5654],
-    "新北市": [25.0169, 121.4628],
-    "桃園市": [24.9936, 121.2969],
-    "台中市": [24.1477, 120.6736],
-    "台南市": [22.9999, 120.2270],
-    "高雄市": [22.6273, 120.3014],
-    "基隆市": [25.1276, 121.7392],
-    "新竹市": [24.8036, 120.9686],
-    "嘉義市": [23.4800, 120.4494],
-    "新竹縣": [24.8387, 121.0256],
-    "苗栗縣": [24.5636, 120.8214],
-    "彰化縣": [24.0681, 120.5730],
-    "南投縣": [23.9150, 120.6856],
-    "雲林縣": [23.7092, 120.5450],
-    "嘉義縣": [23.4582, 120.5190],
-    "屏東縣": [22.5500, 120.5500],
-    "宜蘭縣": [24.7021, 121.7378],
-    "花蓮縣": [23.9833, 121.6000],
-    "台東縣": [22.7583, 121.1500],
+# 分類 + 子類別
+PLACE_TYPES = {
+    "教育": {
+        "圖書館": "library",
+        "幼兒園": "preschool",
+        "小學": "primary_school",
+        "學校": "school",
+        "中學": "secondary_school",
+        "大學": "university",
+    },
+    "健康與保健": {
+        "整脊診所": "chiropractor",
+        "牙科診所": "dental_clinic",
+        "牙醫": "dentist",
+        "醫師": "doctor",
+        "藥局": "pharmacy",
+        "醫院": "hospital",
+        "藥妝店": "drugstore",
+        "醫學檢驗所": "medical_lab",
+        "物理治療所": "physiotherapist",
+        "按摩": "massage",
+        "三溫暖": "sauna",
+        "皮膚科診所": "skin_care_clinic",
+        "SPA": "spa",
+        "日曬工作室": "tanning_studio",
+        "健康中心": "wellness_center",
+        "瑜伽教室": "yoga_studio",
+    },
+    "購物": {
+        "亞洲超市": "asian_grocery_store",
+        "汽車零件行": "auto_parts_store",
+        "腳踏車行": "bicycle_store",
+        "書店": "book_store",
+        "肉舖": "butcher_shop",
+        "手機行": "cell_phone_store",
+        "服飾店": "clothing_store",
+        "便利商店": "convenience_store",
+        "百貨公司": "department_store",
+        "折扣商店": "discount_store",
+        "電子產品店": "electronics_store",
+        "食品雜貨店": "food_store",
+        "家具行": "furniture_store",
+        "禮品店": "gift_shop",
+        "五金行": "hardware_store",
+        "家居用品": "home_goods_store",
+        "居家裝修": "home_improvement_store",
+        "珠寶店": "jewelry_store",
+        "酒類專賣": "liquor_store",
+        "傳統市場": "market",
+        "寵物店": "pet_store",
+        "鞋店": "shoe_store",
+        "購物中心": "shopping_mall",
+        "體育用品店": "sporting_goods_store",
+        "商店(其他)": "store",
+        "超市": "supermarket",
+        "倉儲商店": "warehouse_store",
+        "批發商": "wholesaler",
+    },
+    "交通運輸": {
+        "機場": "airport",
+        "簡易飛機場": "airstrip",
+        "公車站": "bus_station",
+        "公車候車亭": "bus_stop",
+        "渡輪碼頭": "ferry_terminal",
+        "直升機場": "heliport",
+        "國際機場": "international_airport",
+        "輕軌站": "light_rail_station",
+        "停車轉乘": "park_and_ride",
+        "地鐵站": "subway_station",
+        "計程車招呼站": "taxi_stand",
+        "火車站": "train_station",
+        "轉運站": "transit_depot",
+        "交通站點": "transit_station",
+        "卡車停靠站": "truck_stop",
+    },
+    "餐飲": {
+        "餐廳": "restaurant"
+    }
 }
 
-with open("district_coords.json", "r", encoding="utf-8") as f:
-    district_coords = json.load(f)
+# 使用者選擇類別與地點類型
+main_category = st.selectbox("選擇分類", PLACE_TYPES.keys())
+sub_types = st.multiselect("選擇要查詢的地點類型", list(PLACE_TYPES[main_category].keys()))
 
-folder = "./"
-file_names = [f for f in os.listdir(folder) if f.startswith("合併後不動產統計_") and f.endswith(".csv")]
-dfs = []
-for file in file_names:
-    try:
-        df = pd.read_csv(os.path.join(folder, file))
-        dfs.append(df)
-    except Exception as e:
-        print(f"讀取 {file} 失敗：{e}")
-combined_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+# 計算經緯度距離（Haversine formula, 回傳公尺）
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
 
-st.title("台灣地圖與不動產資料分析")
+    a = math.sin(d_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(d_lambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c
 
-chart_type = st.sidebar.selectbox("選擇圖表類型", ["不動產價格趨勢分析", "交易筆數分布"])
-col1, col2 = st.columns([3, 1])
+if st.button("查詢"):
+    if not google_api_key:
+        st.error("請先輸入 Google Maps API Key")
+        st.stop()
 
-with col2:
-    st.write("### 縣市選擇")
-    for i in range(0, len(city_coords), 3):
-        cols = st.columns(3)
-        for j, city in enumerate(list(city_coords.keys())[i:i+3]):
-            if cols[j].button(city):
-                st.session_state.selected_city = city
-                st.session_state.selected_district = None
-                st.session_state.show_filtered_data = True
+    # 1️⃣ 地址轉經緯度
+    geo_url = "https://maps.googleapis.com/maps/api/geocode/json"
+    geo_params = {"address": address, "key": google_api_key, "language": "zh-TW"}
+    geo_res = requests.get(geo_url, params=geo_params).json()
 
-    if st.session_state.selected_city:
-        st.subheader(f"行政區：{st.session_state.selected_city}")
-        districts = district_coords.get(st.session_state.selected_city, {})
-        district_names = ["全部的"] + list(districts.keys())
-        for i in range(0, len(district_names), 3):
-            row = st.columns(3)
-            for j, name in enumerate(district_names[i:i+3]):
-                if row[j].button(name):
-                    st.session_state.selected_district = None if name == "全部的" else name
-                    st.session_state.show_filtered_data = True
+    if geo_res.get("status") != "OK":
+        st.error("無法解析該地址")
+        st.stop()
 
-        st.divider()
-        if st.button("回到全台灣"):
-            st.session_state.selected_city = None
-            st.session_state.selected_district = None
-            st.session_state.show_filtered_data = False
+    location = geo_res["results"][0]["geometry"]["location"]
+    lat, lng = location["lat"], location["lng"]
 
-with col1:
-    def create_map(selected_city=None, selected_district=None):
-        if selected_city and selected_district and selected_district in district_coords.get(selected_city, {}):
-            zoom_loc = district_coords[selected_city][selected_district]
-            zoom_level = 14
-        else:
-            zoom_loc = city_coords.get(selected_city, [23.7, 121])
-            zoom_level = 12 if selected_city else 7
+    all_places = []
 
-        m = folium.Map(location=zoom_loc, zoom_start=zoom_level)
+    # 2️⃣ 搜尋周邊地點
+    for sub_type in sub_types:
+        place_type = PLACE_TYPES[main_category][sub_type]
+        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        places_params = {
+            "location": f"{lat},{lng}",
+            "radius": radius,
+            "type": place_type,
+            "key": google_api_key,
+            "language": "zh-TW"
+        }
+        places_res = requests.get(places_url, params=places_params).json()
 
-        for city, coord in city_coords.items():
-            folium.Marker(
-                location=coord,
-                popup=city,
-                tooltip=f"點擊選擇 {city}",
-                icon=folium.Icon(color="red" if city == selected_city else "blue", icon="info-sign"),
-            ).add_to(m)
+        for place in places_res.get("results", []):
+            name = place.get("name", "未命名")
+            p_lat = place["geometry"]["location"]["lat"]
+            p_lng = place["geometry"]["location"]["lng"]
+            dist = int(haversine(lat, lng, p_lat, p_lng))
+            all_places.append((sub_type, name, p_lat, p_lng, dist))
 
-        if selected_city and selected_city in district_coords:
-            for district, coord in district_coords[selected_city].items():
-                color = "orange" if district == selected_district else "green"
-                folium.Marker(
-                    location=coord,
-                    popup=district,
-                    icon=folium.Icon(color=color, icon="home"),
-                ).add_to(m)
+    # 依距離排序
+    all_places = sorted(all_places, key=lambda x: x[4])
 
-        return m
+    # 3️⃣ 顯示結果
+    st.subheader("查詢結果（由近到遠）")
+    if all_places:
+        for t, name, _, _, dist in all_places:
+            st.write(f"**{t}** - {name} ({dist} 公尺)")
+    else:
+        st.write("該範圍內無相關地點。")
 
-    map_data = create_map(st.session_state.selected_city, st.session_state.selected_district)
-    st_folium(map_data, width=800, height=600)
+    # 4️⃣ 標記顏色
+    icon_map = {
+        "餐廳": "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
+        "醫院": "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+        "便利商店": "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        "交通站點": "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+    }
 
-    if st.session_state.show_filtered_data:
-        filtered_df = combined_df.copy()
-        if st.session_state.selected_city:
-            filtered_df = filtered_df[filtered_df["縣市"] == st.session_state.selected_city]
-        if st.session_state.selected_district:
-            filtered_df = filtered_df[filtered_df["行政區"] == st.session_state.selected_district]
+    markers_js = ""
+    for t, name, p_lat, p_lng, dist in all_places:
+        icon_url = icon_map.get(t, "http://maps.google.com/mapfiles/ms/icons/blue-dot.png")
+        markers_js += f"""
+        var marker = new google.maps.Marker({{
+            position: {{lat: {p_lat}, lng: {p_lng}}},
+            map: map,
+            title: "{t}: {name}",
+            icon: {{
+                url: "{icon_url}"
+            }}
+        }});
+        var infowindow = new google.maps.InfoWindow({{
+            content: "{t}: {name}<br>距離中心 {dist} 公尺"
+        }});
+        marker.addListener("click", function() {{
+            infowindow.open(map, marker);
+        }});
+        """
 
-        st.markdown("## 📊 篩選後的不動產資料")
-        st.write(f"共 {len(filtered_df)} 筆資料")
-        st.dataframe(filtered_df)
+    # 5️⃣ 顯示地圖
+    map_html = f"""
+    <div id="map" style="height:500px;"></div>
+    <script>
+    function initMap() {{
+        var center = {{lat: {lat}, lng: {lng}}};
+        var map = new google.maps.Map(document.getElementById('map'), {{
+            zoom: 16,
+            center: center
+        }});
 
-        topic_title = f"{st.session_state.selected_city or '全台'} - {chart_type}"
+        new google.maps.Marker({{
+            position: center,
+            map: map,
+            title: "查詢中心",
+            icon: {{
+                url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+            }}
+        }});
 
-        # 如果主題改變，建立新的對話
-        if st.session_state.previous_topic_title != topic_title:
-            tid = f"topic_{len(st.session_state.topic_ids) + 1}"
-            st.session_state.topic_ids.append(tid)
-            st.session_state.current_topic = tid
-            st.session_state.conversations[tid] = {
-                "title": topic_title,
-                "history": []
-            }
-            st.session_state.previous_topic_title = topic_title
+        {markers_js}
+    }}
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={google_api_key}&callback=initMap" async defer></script>
+    """
 
-        if chart_type == "不動產價格趨勢分析" and len(filtered_df) > 0:
-            filtered_df['年份'] = filtered_df['季度'].str[:3].astype(int) + 1911
-            yearly_avg = filtered_df.groupby(['年份', 'BUILD'])['平均單價元平方公尺'].mean().reset_index()
-            years = sorted(yearly_avg['年份'].unique())
-            year_labels = [str(year) for year in years]
-            new_house_data = [int(yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '新成屋')]['平均單價元平方公尺'].values[0]) if not yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '新成屋')].empty else 0 for y in years]
-            old_house_data = [int(yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '中古屋')]['平均單價元平方公尺'].values[0]) if not yearly_avg[(yearly_avg['年份'] == y) & (yearly_avg['BUILD'] == '中古屋')].empty else 0 for y in years]
-
-            options = {
-                "title": {"text": "不動產價格趨勢分析"},
-                "tooltip": {"trigger": "axis"},
-                "legend": {"data": ["新成屋", "中古屋"]},
-                "xAxis": {"type": "category", "data": year_labels},
-                "yAxis": {"type": "value"},
-                "series": [
-                    {"name": "新成屋", "type": "line", "data": new_house_data},
-                    {"name": "中古屋", "type": "line", "data": old_house_data},
-                ]
-            }
-            st_echarts(options, height="400px")
-
-        elif chart_type == "交易筆數分布" and len(filtered_df) > 0:
-            group_column = "縣市" if st.session_state.selected_city is None else "行政區"
-            if group_column in filtered_df.columns:
-                if '交易筆數' in filtered_df.columns:
-                    counts = filtered_df.groupby(group_column)['交易筆數'].sum().reset_index()
-                else:
-                    counts = filtered_df.groupby(group_column).size().reset_index(name='交易筆數')
-                pie_data = [{"value": int(row["交易筆數"]), "name": row[group_column]} for _, row in counts.iterrows()]
-                pie_data = sorted(pie_data, key=lambda x: x['value'], reverse=True)[:10]
-                options = {
-                    "title": {"text": "交易筆數分布", "left": "center"},
-                    "tooltip": {"trigger": "item"},
-                    "legend": {"orient": "vertical", "left": "left"},
-                    "series": [{
-                        "name": "交易筆數",
-                        "type": "pie",
-                        "radius": "50%",
-                        "data": pie_data
-                    }]
-                }
-                st_echarts(options, height="400px")
-
-        if st.session_state.api_key:
-            genai.configure(api_key=st.session_state.api_key)
-            model = genai.GenerativeModel("models/gemini-2.0-flash")
-            sample_text = filtered_df.head(1000).to_csv(index=False)
-
-            with st.form(key="gemini_chat_form", clear_on_submit=True):
-                user_input = st.text_input("🗣️ 請問 Gemini：", placeholder="請輸入問題...")
-                submitted = st.form_submit_button("送出")
-
-            if submitted and user_input:
-                # 持續對話，追加對話歷史
-                if st.session_state.current_topic is None:
-                    # 沒有對話主題，先建立
-                    tid = f"topic_{len(st.session_state.topic_ids) + 1}"
-                    st.session_state.topic_ids.append(tid)
-                    st.session_state.current_topic = tid
-                    st.session_state.conversations[tid] = {"title": topic_title, "history": []}
-
-                conv = st.session_state.conversations[st.session_state.current_topic]
-
-                # 建立 prompt（包含前10筆資料及歷史對話）
-                prompt = f"請根據以下台灣不動產資料，分析未來趨勢和重要觀察點：\n{sample_text}\n"
-                prompt += f"主題是「{topic_title}」。\n"
-                if conv["history"]:
-                    prompt += "以下是之前的對話記錄：\n"
-                    for msg in conv["history"]:
-                        prompt += f"使用者：{msg['user']}\nGemini：{msg['bot']}\n"
-                prompt += f"使用者：{user_input}\nGemini："
-
-                with st.spinner("Gemini AI 正在分析中..."):
-                    try:
-                        response = model.generate_content(prompt)
-                        answer = response.text.strip()
-                    except Exception as e:
-                        answer = f"⚠️ 產生錯誤：{e}"
-
-                conv["history"].append({"user": user_input, "bot": answer})
-
-            # 顯示對話紀錄
-            if st.session_state.current_topic:
-                conv = st.session_state.conversations[st.session_state.current_topic]
-                st.markdown(f"### 💬 對話紀錄（{conv['title']}）")
-                for msg in reversed(conv["history"]):
-                    st.markdown(f"**👤 你：** {msg['user']}")
-                    st.markdown(f"**🤖 Gemini：** {msg['bot']}")
-                    st.markdown("---")
-        else:
-            st.info("請在左側輸入並保存 API 金鑰以使用 Gemini AI 功能。")
-
-
-
-
-
+    html(map_html, height=500)
 
 
 
