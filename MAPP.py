@@ -10,9 +10,6 @@ google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
 address = st.text_input("輸入地址")
 radius = 600  # 搜尋半徑（公尺）
 
-# 額外關鍵字搜尋
-keyword = st.text_input("輸入想找的特定地點名稱（例如：全聯、星巴克，可留空）")
-
 # 分類 + 子類別
 PLACE_TYPES = {
     "教育": {
@@ -103,6 +100,7 @@ def haversine(lat1, lon1, lat2, lon2):
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     d_phi = math.radians(lat2 - lat1)
     d_lambda = math.radians(lon2 - lon1)
+
     a = math.sin(d_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(d_lambda/2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
@@ -126,7 +124,7 @@ if st.button("查詢"):
 
     all_places = []
 
-    # 2️⃣ 搜尋周邊地點 (分類 + 子類別)
+    # 2️⃣ 搜尋周邊地點
     for sub_type in sub_types:
         place_type = PLACE_TYPES[main_category][sub_type]
         places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
@@ -137,9 +135,6 @@ if st.button("查詢"):
             "key": google_api_key,
             "language": "zh-TW"
         }
-        if keyword:
-            places_params["keyword"] = keyword
-
         places_res = requests.get(places_url, params=places_params).json()
 
         for place in places_res.get("results", []):
@@ -148,24 +143,6 @@ if st.button("查詢"):
             p_lng = place["geometry"]["location"]["lng"]
             dist = int(haversine(lat, lng, p_lat, p_lng))
             all_places.append((sub_type, name, p_lat, p_lng, dist))
-
-    # 如果沒有選子類別，但有輸入關鍵字，也搜尋附近
-    if not sub_types and keyword:
-        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        places_params = {
-            "location": f"{lat},{lng}",
-            "radius": radius,
-            "keyword": keyword,
-            "key": google_api_key,
-            "language": "zh-TW"
-        }
-        places_res = requests.get(places_url, params=places_params).json()
-        for place in places_res.get("results", []):
-            name = place.get("name", "未命名")
-            p_lat = place["geometry"]["location"]["lat"]
-            p_lng = place["geometry"]["location"]["lng"]
-            dist = int(haversine(lat, lng, p_lat, p_lng))
-            all_places.append(("自訂關鍵字", name, p_lat, p_lng, dist))
 
     # 依距離排序
     all_places = sorted(all_places, key=lambda x: x[4])
