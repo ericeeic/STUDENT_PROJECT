@@ -8,7 +8,7 @@ st.title("地址周邊400公尺查詢")
 # 使用者手動輸入 Google API Key
 google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
 address = st.text_input("輸入地址")
-radius = 600  # 搜尋半徑（公尺）
+radius = 400  # 搜尋半徑（公尺）
 
 # 分類 + 子類別
 PLACE_TYPES = {
@@ -210,3 +210,4 @@ if st.button("查詢"):
     """
 
     html(map_html, height=500)
+
