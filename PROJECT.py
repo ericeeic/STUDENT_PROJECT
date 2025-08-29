@@ -1,158 +1,146 @@
 import streamlit as st
-import pandas as pd
-import chardet
-import plotly.express as px
-from sklearn.preprocessing import LabelEncoder
-import google.generativeai as genai
-from dotenv import load_dotenv
+import requests
+import folium
 import os
-import io
+from streamlit.components.v1 import html
+from dotenv import load_dotenv
 
-# 讀取 .env 檔案
+# 載入本地 .env
 load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# 檢查 API KEY
+# 取得 OpenCage API Key
+API_KEY = os.getenv("OPENCAGE_API_KEY")
 if not API_KEY:
-    st.error("API 金鑰未設定，請確認 .env 檔案或環境變數")
+    st.error("請先設定環境變數 OPENCAGE_API_KEY")
     st.stop()
 
-# 設定 Gemini API
-genai.configure(api_key=API_KEY)
+# 支援類別 (OSM tag)
+PLACE_TAGS = {
+    "交通": '["public_transport"="stop_position"]',
+    "超商": '["shop"="convenience"]',
+    "餐廳": '["amenity"="restaurant"]',
+    "學校": '["amenity"="school"]',
 
-# 初始化 Session State
-if 'df_raw_dict' not in st.session_state:
-    st.session_state['df_raw_dict'] = {}
-if 'df_dict' not in st.session_state:
-    st.session_state['df_dict'] = {}
-if 'corr_dict' not in st.session_state:
-    st.session_state['corr_dict'] = {}
-if 'has_data' not in st.session_state:
-    st.session_state['has_data'] = False
+    "教育": {
+        "圖書館": '["amenity"="library"]',
+        "幼兒園": '["amenity"="kindergarten"]',
+        "小學": '["amenity"="school"]["school:level"="primary"]',
+        "中學": '["amenity"="school"]["school:level"="secondary"]',
+        "大學": '["amenity"="university"]'
+    },
 
-# App 標題
-st.title("STREAMLIT作業")
+    "健康與保健": {
+        "脊骨神經科": '["healthcare"="chiropractor"]',
+        "牙科診所": '["healthcare"="dental_clinic"]',
+        "牙醫": '["amenity"="dentist"]',
+        "醫生": '["amenity"="doctors"]',
+        "藥局": '["amenity"="pharmacy"]',
+        "醫院": '["amenity"="hospital"]',
+        "醫學檢驗所": '["healthcare"="medical_lab"]',
+        "物理治療": '["healthcare"="physiotherapist"]',
+        "皮膚護理": '["healthcare"="skin_care_clinic"]',
+        "養生會館": '["leisure"="spa"]',
+        "瑜珈教室": '["leisure"="yoga"]'
+    },
 
-# 四個頁籤
-tab1, tab2, tab3, tab4 = st.tabs(["CSV 檔案分析", "Gemini 聊天", "資料欄位統計", "相關係數分析"])
+    "建築物": {
+        "醫院建築": '["building"="hospital"]',
+        "學校建築": '["building"="school"]',
+        "住宅大樓": '["building"="apartments"]'
+    }
+}
 
-# ---- tab1: CSV 檔案分析 ----
-with tab1:
-    st.header("上傳 CSV 檔案")
-    uploaded_files = st.file_uploader("請上傳 CSV 檔案 (可多檔)", type=['csv'], accept_multiple_files=True)
+st.title("🌍 地址周邊400公尺查詢 (OSM + OpenCage)")
 
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-            st.subheader(f"檔案：{uploaded_file.name}")
+address = st.text_input("輸入地址")
 
-            raw_bytes = uploaded_file.read()
-            encoding = chardet.detect(raw_bytes)['encoding']
-            df_raw = pd.read_csv(io.BytesIO(raw_bytes), encoding=encoding)
+# 先選大類
+main_category = st.selectbox("選擇主分類", list(PLACE_TAGS.keys()))
 
-            st.write(f"資料筆數: {df_raw.shape[0]} 筆，欄位數: {df_raw.shape[1]} 欄")
-            st.dataframe(df_raw, use_container_width=True)
+# 判斷有沒有子分類
+if isinstance(PLACE_TAGS[main_category], dict):
+    selected_types = st.multiselect("選擇細項", PLACE_TAGS[main_category].keys())
+else:
+    selected_types = [main_category]
 
-            # 儲存原始資料
-            st.session_state['df_raw_dict'][uploaded_file.name] = df_raw
+if st.button("查詢"):
+    # 1️⃣ 轉換地址到經緯度 (OpenCage)
+    geo_url = "https://api.opencagedata.com/geocode/v1/json"
+    params = {
+        "q": address,
+        "key": API_KEY,
+        "language": "zh-TW",
+        "limit": 1
+    }
+    try:
+        geo_res = requests.get(geo_url, params=params, timeout=10).json()
+        if geo_res["results"]:
+            lat = geo_res["results"][0]["geometry"]["lat"]
+            lng = geo_res["results"][0]["geometry"]["lng"]
+        else:
+            st.error("無法解析該地址")
+            st.stop()
+    except requests.exceptions.RequestException as e:
+        st.error(f"無法連線到 OpenCage: {e}")
+        st.stop()
 
-            # 複製一份並 LabelEncoder 編碼
-            df = df_raw.copy()
-            cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-            if cat_cols:
-                le = LabelEncoder()
-                for col in cat_cols:
-                    try:
-                        df[col] = le.fit_transform(df[col].astype(str))
-                    except Exception as e:
-                        st.warning(f"欄位 '{col}' 編碼失敗：{e}")
+    # 2️⃣ 建立 Folium 地圖
+    m = folium.Map(location=[lat, lng], zoom_start=16)
+    folium.Marker([lat, lng], popup="查詢中心", icon=folium.Icon(color="red")).add_to(m)
 
-            # 儲存編碼後資料與相關係數
-            st.session_state['df_dict'][uploaded_file.name] = df
-            corr = df.corr()
-            st.session_state['corr_dict'][uploaded_file.name] = corr
-            st.session_state['has_data'] = True
+    # 3️⃣ 查詢 Overpass
+    all_places = []
+    targets = selected_types if isinstance(PLACE_TAGS[main_category], dict) else [main_category]
+    for t in targets:
+        tag = PLACE_TAGS[main_category][t] if isinstance(PLACE_TAGS[main_category], dict) else PLACE_TAGS[t]
+        query = f"""
+        [out:json];
+        (
+          node{tag}(around:400,{lat},{lng});
+          way{tag}(around:400,{lat},{lng});
+          relation{tag}(around:400,{lat},{lng});
+        );
+        out center;
+        """
+        try:
+            res = requests.post(
+                "https://overpass-api.de/api/interpreter",
+                data=query.encode("utf-8"),
+                headers={"User-Agent": "StreamlitApp"},
+                timeout=20
+            )
+            data = res.json()
+        except requests.exceptions.RequestException as e:
+            st.warning(f"無法查詢 {t}: {e}")
+            continue
 
-# ---- tab2: Gemini 聊天 ----
-with tab2:
-    st.header("Gemini")
-    model = genai.GenerativeModel("models/gemini-1.5-flash")
-    chat = genai.ChatSession(model=model)
-
-    user_input = st.text_input("請輸入問題")
-    if user_input:
-        response = chat.send_message(user_input)
-        st.markdown(f"Gemini 回答: {response.text}")
-
-# ---- tab3: 資料欄位統計 ----
-with tab3:
-    st.header("資料欄位統計")
-
-    if st.session_state.get('df_raw_dict'):
-        file_options = list(st.session_state['df_raw_dict'].keys())
-        selected_file = st.selectbox("選擇要分析的檔案", file_options)
-
-        df_raw = st.session_state['df_raw_dict'][selected_file]
-
-        selected_col = st.selectbox("資料欄位統計:選擇欄位查看比例分佈", df_raw.columns.tolist())
-
-        value_counts = df_raw[selected_col].value_counts(dropna=False)
-        percentages = value_counts / value_counts.sum() * 100
-
-        result_df = pd.DataFrame({
-            selected_col: value_counts.index,
-            '數量': value_counts.values,
-            '百分比 (%)': percentages.round(2)
-        })
-
-        st.write(result_df)
-
-        fig = px.pie(
-            result_df,
-            names=selected_col,
-            values='數量',
-            title=f"{selected_col} 分佈圓餅圖",
-            hole=0.3
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("請先上傳 CSV 檔案")
-
-# ---- tab4: 相關係數分析 ----
-with tab4:
-    st.header("相關係數分析")
-
-    if st.session_state.get('has_data', False):
-        file_options = list(st.session_state['corr_dict'].keys())
-        selected_file = st.selectbox("相關係數分析:選擇要分析的檔案", file_options)
-
-        corr = st.session_state['corr_dict'][selected_file]
-
-        st.write(f"檔案 {selected_file} 的相關係數矩陣")
-        st.dataframe(corr, use_container_width=True)
-
-        st.write("相關係數熱力圖 (Plotly)")
-        fig = px.imshow(
-            corr,
-            text_auto=True,
-            color_continuous_scale='RdBu_r',
-            zmin=-1, zmax=1,
-            aspect="auto"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        cols = corr.columns.tolist()
-        col1 = st.selectbox("選擇欄位1", cols)
-        col2 = st.selectbox("選擇欄位2", [c for c in cols if c != col1])
-
-        if col1 and col2:
-            val = corr.loc[col1, col2]
-            st.write(f"{col1} 與 {col2} 的相關係數是：{val:.3f}")
-            threshold = 0.5
-            if val >= threshold:
-                st.success("判斷：正相關")
-            elif val <= -threshold:
-                st.error("判斷：負相關")
+        for el in data.get("elements", []):
+            # 建築物 way/relation 會有 center
+            if "lat" in el and "lon" in el:
+                lat_el, lon_el = el["lat"], el["lon"]
+            elif "center" in el:
+                lat_el, lon_el = el["center"]["lat"], el["center"]["lon"]
             else:
-                st.info("判斷：無明顯相關")
+                continue
+
+            name = el["tags"].get("name", "未命名")
+            all_places.append((t, name))
+            folium.Marker(
+                [lat_el, lon_el],
+                popup=f"{t}: {name}",
+                icon=folium.Icon(color="blue" if "醫院" not in t else "green")
+            ).add_to(m)
+
+    # 4️⃣ 顯示結果與地圖
+    st.subheader("查詢結果")
+    if all_places:
+        for t, name in all_places:
+            st.write(f"**{t}** - {name}")
     else:
-        st.info("請先上傳並分析 CSV 檔案")
+        st.write("該範圍內無相關地點。")
+
+    map_html = m._repr_html_()
+    html(map_html, height=500)
+
+
+
