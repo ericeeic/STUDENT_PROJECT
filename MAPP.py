@@ -5,12 +5,12 @@ from streamlit.components.v1 import html
 
 st.title("地址周邊400公尺查詢")
 
-# 使用者手動輸入 Google API Key
+# 1️⃣ Google Maps API Key 與輸入欄位
 google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
 address = st.text_input("輸入地址")
 radius = 400  # 搜尋半徑（公尺）
 
-# 分類 + 子類別
+# 2️⃣ 分類資料
 PLACE_TYPES = {
     "教育": {
         "圖書館": "library",
@@ -90,27 +90,42 @@ PLACE_TYPES = {
     }
 }
 
-# 使用者選擇類別與地點類型
-main_category = st.selectbox("選擇分類", PLACE_TYPES.keys())
-sub_types = st.multiselect("選擇要查詢的地點類型", list(PLACE_TYPES[main_category].keys()))
+# 3️⃣ 改為「按鈕式」主分類選擇
+if "main_category" not in st.session_state:
+    st.session_state.main_category = list(PLACE_TYPES.keys())[0]
 
-# 計算經緯度距離（Haversine formula, 回傳公尺）
+st.write("### 選擇分類")
+cols = st.columns(len(PLACE_TYPES))
+for i, cat in enumerate(PLACE_TYPES.keys()):
+    if cols[i].button(cat, use_container_width=True):
+        st.session_state.main_category = cat
+
+main_category = st.session_state.main_category
+st.markdown(f"**目前分類：{main_category}**")
+
+# 子類別多選
+sub_types = st.multiselect(
+    "選擇要查詢的地點類型",
+    list(PLACE_TYPES[main_category].keys())
+)
+
+# 4️⃣ 距離計算
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     d_phi = math.radians(lat2 - lat1)
     d_lambda = math.radians(lon2 - lon1)
-
     a = math.sin(d_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(d_lambda/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+# 5️⃣ 查詢與地圖顯示
 if st.button("查詢"):
     if not google_api_key:
         st.error("請先輸入 Google Maps API Key")
         st.stop()
 
-    # 1️⃣ 地址轉經緯度
+    # 地址轉經緯度
     geo_url = "https://maps.googleapis.com/maps/api/geocode/json"
     geo_params = {"address": address, "key": google_api_key, "language": "zh-TW"}
     geo_res = requests.get(geo_url, params=geo_params).json()
@@ -124,7 +139,7 @@ if st.button("查詢"):
 
     all_places = []
 
-    # 2️⃣ 搜尋周邊地點
+    # 搜尋周邊
     for sub_type in sub_types:
         place_type = PLACE_TYPES[main_category][sub_type]
         places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
@@ -144,10 +159,8 @@ if st.button("查詢"):
             dist = int(haversine(lat, lng, p_lat, p_lng))
             all_places.append((sub_type, name, p_lat, p_lng, dist))
 
-    # 依距離排序
     all_places = sorted(all_places, key=lambda x: x[4])
 
-    # 3️⃣ 顯示結果
     st.subheader("查詢結果（由近到遠）")
     if all_places:
         for t, name, _, _, dist in all_places:
@@ -155,7 +168,7 @@ if st.button("查詢"):
     else:
         st.write("該範圍內無相關地點。")
 
-    # 4️⃣ 標記顏色
+    # 標記顏色
     icon_map = {
         "餐廳": "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
         "醫院": "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
@@ -183,7 +196,6 @@ if st.button("查詢"):
         }});
         """
 
-    # 5️⃣ 顯示地圖
     map_html = f"""
     <div id="map" style="height:500px;"></div>
     <script>
@@ -208,6 +220,4 @@ if st.button("查詢"):
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key={google_api_key}&callback=initMap" async defer></script>
     """
-
     html(map_html, height=500)
-
