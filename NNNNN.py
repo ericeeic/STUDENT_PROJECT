@@ -35,10 +35,11 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-def query_google_places(lat, lng, api_key, radius=500):
-    results = {k: [] for k in PLACE_TYPES.keys()}
-    for label, types in PLACE_TYPES.items():
-        for t in types:
+def query_google_places(lat, lng, api_key, selected_categories, radius=500):
+    """只查詢使用者勾選的類別"""
+    results = {k: [] for k in selected_categories}
+    for label in selected_categories:
+        for t in PLACE_TYPES[label]:
             url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
             params = {
                 "location": f"{lat},{lng}",
@@ -74,7 +75,7 @@ def add_markers(m, info_dict, color):
 # ===============================
 # Streamlit 介面
 # ===============================
-st.title("🏠 房屋比較 + Google Places 地圖 + Gemini 分析")
+st.title("🏠 房屋比較 + Google Places 雙地圖 + Gemini 分析")
 
 google_key = st.text_input("🔑 輸入 Google Maps API Key", type="password")
 gemini_key = st.text_input("🔑 輸入 Gemini API Key", type="password")
@@ -88,12 +89,23 @@ if google_key and gemini_key:
     with col2:
         addr_b = st.text_input("房屋 B 地址")
 
-    # ✅ 改成可拉動的連續滑條
+    # 拉條調整搜尋半徑
     radius = st.slider("搜尋半徑 (公尺)", min_value=100, max_value=2000, value=500, step=50)
+
+    # 類別按鈕 (多選)
+    st.subheader("選擇要比較的生活機能類別")
+    selected_categories = []
+    cols = st.columns(3)
+    for idx, cat in enumerate(PLACE_TYPES.keys()):
+        if cols[idx % 3].checkbox(cat, value=True):
+            selected_categories.append(cat)
 
     if st.button("比較房屋"):
         if not addr_a or not addr_b:
             st.warning("請輸入兩個地址")
+            st.stop()
+        if not selected_categories:
+            st.warning("請至少選擇一個類別")
             st.stop()
 
         lat_a, lng_a = geocode_address(addr_a, google_key)
@@ -102,33 +114,27 @@ if google_key and gemini_key:
             st.error("❌ 無法解析其中一個地址")
             st.stop()
 
-        info_a = query_google_places(lat_a, lng_a, google_key, radius=radius)
-        info_b = query_google_places(lat_b, lng_b, google_key, radius=radius)
+        # 查詢周邊
+        info_a = query_google_places(lat_a, lng_a, google_key, selected_categories, radius=radius)
+        info_b = query_google_places(lat_b, lng_b, google_key, selected_categories, radius=radius)
 
         text_a = format_info(addr_a, info_a)
         text_b = format_info(addr_b, info_b)
 
-        st.subheader("📍 地圖顯示")
-        center_lat = (lat_a + lat_b) / 2
-        center_lng = (lng_a + lng_b) / 2
-        m = folium.Map(location=[center_lat, center_lng], zoom_start=15)
+        # =======================
+        # 雙地圖顯示
+        # =======================
+        st.subheader("📍 房屋 A 周邊地圖")
+        m_a = folium.Map(location=[lat_a, lng_a], zoom_start=15)
+        folium.Marker([lat_a, lng_a], popup=f"房屋 A：{addr_a}", icon=folium.Icon(color="red", icon="home")).add_to(m_a)
+        add_markers(m_a, info_a, "red")
+        html(m_a._repr_html_(), height=400)
 
-        # 房屋位置
-        folium.Marker(
-            [lat_a, lng_a],
-            popup=f"房屋 A：{addr_a}",
-            icon=folium.Icon(color="red", icon="home"),
-        ).add_to(m)
-        folium.Marker(
-            [lat_b, lng_b],
-            popup=f"房屋 B：{addr_b}",
-            icon=folium.Icon(color="blue", icon="home"),
-        ).add_to(m)
-
-        add_markers(m, info_a, "red")
-        add_markers(m, info_b, "blue")
-
-        html(m._repr_html_(), height=500)
+        st.subheader("📍 房屋 B 周邊地圖")
+        m_b = folium.Map(location=[lat_b, lng_b], zoom_start=15)
+        folium.Marker([lat_b, lng_b], popup=f"房屋 B：{addr_b}", icon=folium.Icon(color="blue", icon="home")).add_to(m_b)
+        add_markers(m_b, info_b, "blue")
+        html(m_b._repr_html_(), height=400)
 
         # Gemini 分析
         prompt = f"""你是一位房地產分析專家，請比較以下兩間房屋的生活機能，
