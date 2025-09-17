@@ -36,6 +36,7 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 def query_google_places(lat, lng, api_key, selected_categories, radius=500):
+    """只查詢使用者勾選的類別"""
     results = {k: [] for k in selected_categories}
     for label in selected_categories:
         for t in PLACE_TYPES[label]:
@@ -74,20 +75,13 @@ def add_markers(m, info_dict, color):
 # ===============================
 # Streamlit 介面
 # ===============================
-st.title("🏠 房屋比較 + Google Places 雙地圖 + Gemini 對話")
+st.title("🏠 房屋比較 + Google Places 雙地圖 + Gemini 分析")
 
-google_key = st.text_input("🔑 Google Maps API Key", type="password")
-gemini_key = st.text_input("🔑 Gemini API Key", type="password")
+google_key = st.text_input("🔑 輸入 Google Maps API Key", type="password")
+gemini_key = st.text_input("🔑 輸入 Gemini API Key", type="password")
 
 if google_key and gemini_key:
     genai.configure(api_key=gemini_key)
-
-    # 初始化狀態
-    if "comparison_done" not in st.session_state:
-        st.session_state["comparison_done"] = False
-        st.session_state["text_a"] = ""
-        st.session_state["text_b"] = ""
-        st.session_state["chat_history"] = []
 
     col1, col2 = st.columns(2)
     with col1:
@@ -95,9 +89,10 @@ if google_key and gemini_key:
     with col2:
         addr_b = st.text_input("房屋 B 地址")
 
-    radius = st.slider("搜尋半徑 (公尺)", 100, 2000, 500, step=50)
+    # 拉條調整搜尋半徑
+    radius = st.slider("搜尋半徑 (公尺)", min_value=100, max_value=2000, value=500, step=50)
 
-    # 類別按鈕
+    # 類別按鈕 (多選)
     st.subheader("選擇要比較的生活機能類別")
     selected_categories = []
     cols = st.columns(3)
@@ -119,17 +114,16 @@ if google_key and gemini_key:
             st.error("❌ 無法解析其中一個地址")
             st.stop()
 
-        info_a = query_google_places(lat_a, lng_a, google_key, selected_categories, radius)
-        info_b = query_google_places(lat_b, lng_b, google_key, selected_categories, radius)
+        # 查詢周邊
+        info_a = query_google_places(lat_a, lng_a, google_key, selected_categories, radius=radius)
+        info_b = query_google_places(lat_b, lng_b, google_key, selected_categories, radius=radius)
 
         text_a = format_info(addr_a, info_a)
         text_b = format_info(addr_b, info_b)
 
-        st.session_state["text_a"] = text_a
-        st.session_state["text_b"] = text_b
-        st.session_state["comparison_done"] = True
-
-        # 雙地圖
+        # =======================
+        # 雙地圖顯示
+        # =======================
         st.subheader("📍 房屋 A 周邊地圖")
         m_a = folium.Map(location=[lat_a, lng_a], zoom_start=15)
         folium.Marker([lat_a, lng_a], popup=f"房屋 A：{addr_a}", icon=folium.Icon(color="red", icon="home")).add_to(m_a)
@@ -142,7 +136,7 @@ if google_key and gemini_key:
         add_markers(m_b, info_b, "blue")
         html(m_b._repr_html_(), height=400)
 
-        # Gemini 初步分析
+        # Gemini 分析
         prompt = f"""你是一位房地產分析專家，請比較以下兩間房屋的生活機能，
         並列出優缺點與結論：
         {text_a}
@@ -150,39 +144,12 @@ if google_key and gemini_key:
         """
         model = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content(prompt)
+
         st.subheader("📊 Gemini 分析結果")
         st.write(response.text)
 
-    # ===============================
-    # 對話區域
-    # ===============================
-    if st.session_state["comparison_done"]:
-        st.header("💬 與 Gemini 持續對話")
-        with st.form("chat_form", clear_on_submit=True):
-            user_input = st.text_input("請輸入問題…")
-            submitted = st.form_submit_button("送出")
-
-        if submitted and user_input:
-            st.session_state["chat_history"].append(("👤", user_input))
-            chat_prompt = f"""
-            以下是兩間房屋的周邊資訊：
-            {st.session_state['text_a']}
-            {st.session_state['text_b']}
-            使用者問題：{user_input}
-            請依據房屋周邊環境提供有意義的回覆。
-            """
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            resp = model.generate_content(chat_prompt)
-            st.session_state["chat_history"].append(("🤖", resp.text))
-
-        # 顯示對話紀錄
-        for role, msg in st.session_state["chat_history"]:
-            st.markdown(f"**{role}**：{msg}")
-
-    # 側邊欄顯示統計資訊
-    if st.session_state["comparison_done"]:
         st.sidebar.subheader("🏠 房屋資訊對照表")
-        st.sidebar.markdown(f"### 房屋 A\n{st.session_state['text_a']}")
-        st.sidebar.markdown(f"### 房屋 B\n{st.session_state['text_b']}")
+        st.sidebar.markdown(f"### 房屋 A\n{text_a}")
+        st.sidebar.markdown(f"### 房屋 B\n{text_b}")
 else:
     st.info("請先輸入 Google Maps 與 Gemini API Key")
