@@ -9,7 +9,7 @@ import google.generativeai as genai
 # Google Places 類別
 # ===============================
 PLACE_TYPES = {
-    "交通": ["bus_station", "subway_station", "train_station"],
+    "交通": ["bus_stop", "subway_station", "train_station"],
     "超商": ["convenience_store"],
     "餐廳": ["restaurant", "cafe"],
     "學校": ["school", "university", "primary_school", "secondary_school"],
