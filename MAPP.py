@@ -32,7 +32,7 @@ PLACE_TYPES = {
         "百貨公司": "department_store",
     },
     "交通運輸": {
-        "公車站": "bus_station",
+        "公車站": "bus_stop",
         "地鐵站": "subway_station",
         "火車站": "train_station",
     },
@@ -152,3 +152,4 @@ cols = st.columns(len(PLACE_TYPES))
 for i, cat in enumerate(PLACE_TYPES.keys()):
     if cols[i].button(cat, use_container_width=True):
         search_category(cat)
+
