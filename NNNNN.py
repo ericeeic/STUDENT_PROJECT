@@ -1,26 +1,9 @@
 import streamlit as st
 import requests
-import os
-from dotenv import load_dotenv
-import google.generativeai as genai
 import math
-
-# ===============================
-# 載入環境變數
-# ===============================
-load_dotenv()
-GOOGLE_KEY = os.getenv("GOOGLE_API_KEY")  # ✅ 你要在 .env 裡設定 GOOGLE_API_KEY
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-
-if not GOOGLE_KEY:
-    st.error("❌ 請先設定環境變數 GOOGLE_API_KEY")
-    st.stop()
-
-if not GEMINI_KEY:
-    st.error("❌ 請先設定環境變數 GEMINI_API_KEY")
-    st.stop()
-
-genai.configure(api_key=GEMINI_KEY)
+import folium
+from streamlit.components.v1 import html
+import google.generativeai as genai
 
 # ===============================
 # Google Places 類別
@@ -31,16 +14,15 @@ PLACE_TYPES = {
     "餐廳": ["restaurant", "cafe"],
     "學校": ["school", "university", "primary_school", "secondary_school"],
     "醫院": ["hospital"],
-    "藥局": ["pharmacy"]
+    "藥局": ["pharmacy"],
 }
 
 # ===============================
 # 工具函式
 # ===============================
-def geocode_address(address: str):
-    """Google Geocoding API 將地址轉經緯度"""
+def geocode_address(address: str, api_key: str):
     url = "https://maps.googleapis.com/maps/api/geocode/json"
-    params = {"address": address, "key": GOOGLE_KEY, "language": "zh-TW"}
+    params = {"address": address, "key": api_key, "language": "zh-TW"}
     r = requests.get(url, params=params, timeout=10).json()
     if r.get("status") == "OK" and r["results"]:
         loc = r["results"][0]["geometry"]["location"]
@@ -49,13 +31,11 @@ def geocode_address(address: str):
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
-    from math import radians, sin, cos, sqrt, atan2
-    dlat, dlon = radians(lat2-lat1), radians(lon2-lon1)
-    a = sin(dlat/2)**2 + cos(radians(lat1))*cos(radians(lat2))*sin(dlon/2)**2
-    return R * 2 * atan2(sqrt(a), sqrt(1-a))
+    dlat, dlon = math.radians(lat2-lat1), math.radians(lon2-lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-def query_google_places(lat, lng, radius=500):
-    """以 Google Places Nearby Search 查詢各類別地點"""
+def query_google_places(lat, lng, api_key, radius=500):
     results = {k: [] for k in PLACE_TYPES.keys()}
     for label, types in PLACE_TYPES.items():
         for t in types:
@@ -65,7 +45,7 @@ def query_google_places(lat, lng, radius=500):
                 "radius": radius,
                 "type": t,
                 "language": "zh-TW",
-                "key": GOOGLE_KEY
+                "key": api_key,
             }
             r = requests.get(url, params=params, timeout=10).json()
             for place in r.get("results", []):
@@ -73,7 +53,7 @@ def query_google_places(lat, lng, radius=500):
                 p_lat = place["geometry"]["location"]["lat"]
                 p_lng = place["geometry"]["location"]["lng"]
                 dist = int(haversine(lat, lng, p_lat, p_lng))
-                results[label].append(f"{name}（{dist} 公尺）")
+                results[label].append((name, p_lat, p_lng, dist))
     return results
 
 def format_info(address, info_dict):
@@ -82,89 +62,90 @@ def format_info(address, info_dict):
         lines.append(f"- {k}: {len(v)} 個")
     return "\n".join(lines)
 
+def add_markers(m, info_dict, color):
+    for category, places in info_dict.items():
+        for name, lat, lng, dist in places:
+            folium.Marker(
+                [lat, lng],
+                popup=f"{category}：{name}（{dist} 公尺）",
+                icon=folium.Icon(color=color, icon="info-sign"),
+            ).add_to(m)
+
 # ===============================
 # Streamlit 介面
 # ===============================
-st.title("🏠 房屋比較助手 (Google Places 版本)")
+st.title("🏠 房屋比較 + Google Places 地圖 + Gemini 分析")
 
-if "comparison_done" not in st.session_state:
-    st.session_state["comparison_done"] = False
-    st.session_state["chat_history"] = []
-    st.session_state["text_a"] = ""
-    st.session_state["text_b"] = ""
+google_key = st.text_input("🔑 輸入 Google Maps API Key", type="password")
+gemini_key = st.text_input("🔑 輸入 Gemini API Key", type="password")
 
-col1, col2 = st.columns(2)
-with col1:
-    addr_a = st.text_input("輸入房屋 A 地址")
-with col2:
-    addr_b = st.text_input("輸入房屋 B 地址")
+if google_key and gemini_key:
+    genai.configure(api_key=gemini_key)
 
-radius = st.select_slider("選擇查詢半徑 (公尺)", options=[200, 400, 600, 1000], value=500)
+    col1, col2 = st.columns(2)
+    with col1:
+        addr_a = st.text_input("房屋 A 地址")
+    with col2:
+        addr_b = st.text_input("房屋 B 地址")
 
-if st.button("比較房屋"):
-    if not addr_a or not addr_b:
-        st.warning("請輸入兩個地址")
-        st.stop()
+    radius = st.select_slider("搜尋半徑 (公尺)", [200, 400, 600, 1000], value=500)
 
-    lat_a, lng_a = geocode_address(addr_a)
-    lat_b, lng_b = geocode_address(addr_b)
-    if not lat_a or not lat_b:
-        st.error("❌ 無法解析其中一個地址")
-        st.stop()
+    if st.button("比較房屋"):
+        if not addr_a or not addr_b:
+            st.warning("請輸入兩個地址")
+            st.stop()
 
-    info_a = query_google_places(lat_a, lng_a, radius=radius)
-    info_b = query_google_places(lat_b, lng_b, radius=radius)
+        lat_a, lng_a = geocode_address(addr_a, google_key)
+        lat_b, lng_b = geocode_address(addr_b, google_key)
+        if not lat_a or not lat_b:
+            st.error("❌ 無法解析其中一個地址")
+            st.stop()
 
-    text_a = format_info(addr_a, info_a)
-    text_b = format_info(addr_b, info_b)
+        info_a = query_google_places(lat_a, lng_a, google_key, radius=radius)
+        info_b = query_google_places(lat_b, lng_b, google_key, radius=radius)
 
-    st.session_state["text_a"] = text_a
-    st.session_state["text_b"] = text_b
+        text_a = format_info(addr_a, info_a)
+        text_b = format_info(addr_b, info_b)
 
-    prompt = f"""你是一位房地產分析專家，請比較以下兩間房屋的生活機能，
-    並列出優缺點與結論：
-    {text_a}
-    {text_b}
-    """
-    model = genai.GenerativeModel("gemini-2.0-flash")
-    response = model.generate_content(prompt)
+        st.subheader("📍 地圖顯示")
+        # 中心點取兩者平均
+        center_lat = (lat_a + lat_b) / 2
+        center_lng = (lng_a + lng_b) / 2
+        m = folium.Map(location=[center_lat, center_lng], zoom_start=15)
 
-    st.subheader("📊 Gemini 分析結果")
-    st.write(response.text)
+        # 房屋位置
+        folium.Marker(
+            [lat_a, lng_a],
+            popup=f"房屋 A：{addr_a}",
+            icon=folium.Icon(color="red", icon="home"),
+        ).add_to(m)
+        folium.Marker(
+            [lat_b, lng_b],
+            popup=f"房屋 B：{addr_b}",
+            icon=folium.Icon(color="blue", icon="home"),
+        ).add_to(m)
 
-    st.session_state["comparison_done"] = True
+        # 周邊地點
+        add_markers(m, info_a, "red")
+        add_markers(m, info_b, "blue")
 
-# ===============================
-# 側邊欄
-# ===============================
-with st.sidebar:
-    if st.session_state["comparison_done"]:
-        st.subheader("🏠 房屋資訊對照表")
-        st.markdown(f"### 房屋 A\n{st.session_state['text_a']}")
-        st.markdown(f"### 房屋 B\n{st.session_state['text_b']}")
-    else:
-        st.info("⚠️ 請先輸入房屋地址並比較")
+        html(m._repr_html_(), height=500)
 
-# ===============================
-# 聊天
-# ===============================
-if st.session_state["comparison_done"]:
-    st.header("💬 對話")
-    with st.form("chat_form", clear_on_submit=True):
-        user_input = st.text_input("想問什麼？", placeholder="請輸入問題…")
-        submitted = st.form_submit_button("🚀 送出")
-    if submitted and user_input:
-        st.session_state["chat_history"].append(("👤", user_input))
-        chat_prompt = f"""
-        以下是兩間房屋的周邊資訊：
-        {st.session_state['text_a']}
-        {st.session_state['text_b']}
-        使用者問題：{user_input}
-        請根據房屋周邊的生活機能提供回覆。
+        # Gemini 分析
+        prompt = f"""你是一位房地產分析專家，請比較以下兩間房屋的生活機能，
+        並列出優缺點與結論：
+        {text_a}
+        {text_b}
         """
         model = genai.GenerativeModel("gemini-2.0-flash")
-        resp = model.generate_content(chat_prompt)
-        st.session_state["chat_history"].append(("🤖", resp.text))
+        response = model.generate_content(prompt)
 
-    for role, msg in st.session_state["chat_history"]:
-        st.markdown(f"**{role}**：{msg}")
+        st.subheader("📊 Gemini 分析結果")
+        st.write(response.text)
+
+        # 顯示統計資訊
+        st.sidebar.subheader("🏠 房屋資訊對照表")
+        st.sidebar.markdown(f"### 房屋 A\n{text_a}")
+        st.sidebar.markdown(f"### 房屋 B\n{text_b}")
+else:
+    st.info("請先輸入 Google Maps 與 Gemini API Key")
