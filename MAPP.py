@@ -12,6 +12,9 @@ address = st.text_input("輸入地址")
 # 半徑用滑桿控制
 radius = st.slider("選擇搜尋半徑 (公尺)", min_value=200, max_value=600, value=400, step=50)
 
+# 關鍵字搜尋
+keyword = st.text_input("輸入關鍵字 (選填，例如：咖啡、火鍋)")
+
 # 分類 + 子類別
 PLACE_TYPES = {
     "教育": {
@@ -43,6 +46,12 @@ PLACE_TYPES = {
     }
 }
 
+# 所有子類別的集合
+all_sub_types = {sub: type_ for cat in PLACE_TYPES.values() for sub, type_ in cat.items()}
+
+# 多選子類別
+selected_sub_types = st.multiselect("選擇想查詢的子類別（可多選）", list(all_sub_types.keys()))
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -52,12 +61,15 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
-def search_category(main_category):
+def search_places():
     if not google_api_key:
         st.error("請先輸入 Google Maps API Key")
         return
     if not address:
         st.error("請輸入地址")
+        return
+    if not selected_sub_types and not keyword:
+        st.error("請至少選擇一個分類或輸入關鍵字")
         return
 
     # 地址轉經緯度
@@ -72,12 +84,35 @@ def search_category(main_category):
     lat, lng = location["lat"], location["lng"]
 
     all_places = []
-    for sub_type, place_type in PLACE_TYPES[main_category].items():
+
+    # 根據多選的子類別查詢
+    for sub_type in selected_sub_types:
+        place_type = all_sub_types[sub_type]
         places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
         places_params = {
             "location": f"{lat},{lng}",
             "radius": radius,
             "type": place_type,
+            "key": google_api_key,
+            "language": "zh-TW"
+        }
+        if keyword:
+            places_params["keyword"] = keyword
+        places_res = requests.get(places_url, params=places_params).json()
+        for place in places_res.get("results", []):
+            name = place.get("name", "未命名")
+            p_lat = place["geometry"]["location"]["lat"]
+            p_lng = place["geometry"]["location"]["lng"]
+            dist = int(haversine(lat, lng, p_lat, p_lng))
+            all_places.append((sub_type, name, p_lat, p_lng, dist))
+
+    # 如果只有輸入關鍵字，也能查詢（不依靠 type）
+    if keyword and not selected_sub_types:
+        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        places_params = {
+            "location": f"{lat},{lng}",
+            "radius": radius,
+            "keyword": keyword,
             "key": google_api_key,
             "language": "zh-TW"
         }
@@ -87,13 +122,13 @@ def search_category(main_category):
             p_lat = place["geometry"]["location"]["lat"]
             p_lng = place["geometry"]["location"]["lng"]
             dist = int(haversine(lat, lng, p_lat, p_lng))
-            all_places.append((sub_type, name, p_lat, p_lng, dist))
+            all_places.append(("關鍵字", name, p_lat, p_lng, dist))
 
     all_places = sorted(all_places, key=lambda x: x[4])
 
     # 顯示目前搜尋半徑
     st.write(f"目前搜尋半徑：{radius} 公尺")
-    st.subheader(f"【{main_category}】查詢結果（由近到遠）")
+    st.subheader("查詢結果（由近到遠）")
 
     if not all_places:
         st.write("該範圍內無相關地點。")
@@ -102,22 +137,14 @@ def search_category(main_category):
     for t, name, _, _, dist in all_places:
         st.write(f"**{t}** - {name} ({dist} 公尺)")
 
-    icon_map = {
-        "餐廳": "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
-        "醫院": "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-        "便利商店": "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-        "交通站點": "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-    }
-
+    # 地圖標記
     markers_js = ""
     for t, name, p_lat, p_lng, dist in all_places:
-        icon_url = icon_map.get(t, "http://maps.google.com/mapfiles/ms/icons/blue-dot.png")
         markers_js += f"""
         var marker = new google.maps.Marker({{
             position: {{lat: {p_lat}, lng: {p_lng}}},
             map: map,
             title: "{t}: {name}",
-            icon: {{ url: "{icon_url}" }}
         }});
         var infowindow = new google.maps.InfoWindow({{
             content: "{t}: {name}<br>距離中心 {dist} 公尺"
@@ -126,6 +153,20 @@ def search_category(main_category):
             infowindow.open(map, marker);
         }});
         """
+
+    # 加入搜尋範圍圓圈
+    circle_js = f"""
+        var circle = new google.maps.Circle({{
+            strokeColor: "#FF0000",
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: "#FF0000",
+            fillOpacity: 0.1,
+            map: map,
+            center: center,
+            radius: {radius}
+        }});
+    """
 
     map_html = f"""
     <div id="map" style="height:500px;"></div>
@@ -144,6 +185,7 @@ def search_category(main_category):
             icon: {{ url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png" }}
         }});
 
+        {circle_js}
         {markers_js}
     }}
     </script>
@@ -151,9 +193,6 @@ def search_category(main_category):
     """
     html(map_html, height=500)
 
-# 主分類按鈕列：點擊即搜尋
-st.write("### 點擊分類直接搜尋")
-cols = st.columns(len(PLACE_TYPES))
-for i, cat in enumerate(PLACE_TYPES.keys()):
-    if cols[i].button(cat, use_container_width=True):
-        search_category(cat)
+# 查詢按鈕
+if st.button("開始查詢", use_container_width=True):
+    search_places()
