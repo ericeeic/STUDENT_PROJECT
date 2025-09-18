@@ -46,11 +46,8 @@ PLACE_TYPES = {
     }
 }
 
-# 所有子類別的集合
-all_sub_types = {sub: type_ for cat in PLACE_TYPES.values() for sub, type_ in cat.items()}
-
-# 多選子類別
-selected_sub_types = st.multiselect("選擇想查詢的子類別（可多選）", list(all_sub_types.keys()))
+# 單選大類別
+selected_category = st.selectbox("選擇想查詢的大類別", ["(不選)", *PLACE_TYPES.keys()])
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -68,8 +65,8 @@ def search_places():
     if not address:
         st.error("請輸入地址")
         return
-    if not selected_sub_types and not keyword:
-        st.error("請至少選擇一個分類或輸入關鍵字")
+    if selected_category == "(不選)" and not keyword:
+        st.error("請至少選擇一個大類別或輸入關鍵字")
         return
 
     # 地址轉經緯度
@@ -85,29 +82,30 @@ def search_places():
 
     all_places = []
 
-    # 根據多選的子類別查詢
-    for sub_type in selected_sub_types:
-        place_type = all_sub_types[sub_type]
-        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        places_params = {
-            "location": f"{lat},{lng}",
-            "radius": radius,
-            "type": place_type,
-            "key": google_api_key,
-            "language": "zh-TW"
-        }
-        if keyword:
-            places_params["keyword"] = keyword
-        places_res = requests.get(places_url, params=places_params).json()
-        for place in places_res.get("results", []):
-            name = place.get("name", "未命名")
-            p_lat = place["geometry"]["location"]["lat"]
-            p_lng = place["geometry"]["location"]["lng"]
-            dist = int(haversine(lat, lng, p_lat, p_lng))
-            all_places.append((sub_type, name, p_lat, p_lng, dist))
+    # 根據選擇的大類別查詢（包含其所有子類別）
+    if selected_category != "(不選)":
+        for sub_type, place_type in PLACE_TYPES[selected_category].items():
+            places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+            places_params = {
+                "location": f"{lat},{lng}",
+                "radius": radius,
+                "type": place_type,
+                "key": google_api_key,
+                "language": "zh-TW"
+            }
+            if keyword:
+                places_params["keyword"] = keyword
+            places_res = requests.get(places_url, params=places_params).json()
+            for place in places_res.get("results", []):
+                name = place.get("name", "未命名")
+                p_lat = place["geometry"]["location"]["lat"]
+                p_lng = place["geometry"]["location"]["lng"]
+                dist = int(haversine(lat, lng, p_lat, p_lng))
+                if dist <= radius:  # 過濾超出範圍的結果
+                    all_places.append((sub_type, name, p_lat, p_lng, dist))
 
     # 如果只有輸入關鍵字，也能查詢（不依靠 type）
-    if keyword and not selected_sub_types:
+    if keyword and selected_category == "(不選)":
         places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
         places_params = {
             "location": f"{lat},{lng}",
@@ -122,7 +120,8 @@ def search_places():
             p_lat = place["geometry"]["location"]["lat"]
             p_lng = place["geometry"]["location"]["lng"]
             dist = int(haversine(lat, lng, p_lat, p_lng))
-            all_places.append(("關鍵字", name, p_lat, p_lng, dist))
+            if dist <= radius:
+                all_places.append(("關鍵字", name, p_lat, p_lng, dist))
 
     all_places = sorted(all_places, key=lambda x: x[4])
 
