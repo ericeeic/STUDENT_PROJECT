@@ -101,8 +101,9 @@ def search_places():
                 p_lat = place["geometry"]["location"]["lat"]
                 p_lng = place["geometry"]["location"]["lng"]
                 dist = int(haversine(lat, lng, p_lat, p_lng))
+                place_id = place.get("place_id", "")
                 if dist <= radius:  # 過濾超出範圍的結果
-                    all_places.append((sub_type, name, p_lat, p_lng, dist))
+                    all_places.append((sub_type, name, p_lat, p_lng, dist, place_id))
 
     # 如果只有輸入關鍵字，也能查詢（不依靠 type）
     if keyword and selected_category == "(不選)":
@@ -120,8 +121,9 @@ def search_places():
             p_lat = place["geometry"]["location"]["lat"]
             p_lng = place["geometry"]["location"]["lng"]
             dist = int(haversine(lat, lng, p_lat, p_lng))
+            place_id = place.get("place_id", "")
             if dist <= radius:
-                all_places.append(("關鍵字", name, p_lat, p_lng, dist))
+                all_places.append(("關鍵字", name, p_lat, p_lng, dist, place_id))
 
     all_places = sorted(all_places, key=lambda x: x[4])
 
@@ -133,12 +135,22 @@ def search_places():
         st.write("該範圍內無相關地點。")
         return
 
-    for t, name, _, _, dist in all_places:
+    # 清單顯示在主畫面
+    for t, name, _, _, dist, _ in all_places:
         st.write(f"**{t}** - {name} ({dist} 公尺)")
+
+    # 側邊欄顯示 Google Maps 連結
+    st.sidebar.subheader("Google 地圖連結")
+    for t, name, _, _, dist, place_id in all_places:
+        if place_id:
+            url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+            st.sidebar.markdown(f"- [{name} ({dist} 公尺)]({url})")
 
     # 地圖標記
     markers_js = ""
-    for t, name, p_lat, p_lng, dist in all_places:
+    for t, name, p_lat, p_lng, dist, place_id in all_places:
+        gmap_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}" if place_id else ""
+        info_text = f'{t}: <a href="{gmap_url}" target="_blank">{name}</a><br>距離中心 {dist} 公尺'
         markers_js += f"""
         var marker = new google.maps.Marker({{
             position: {{lat: {p_lat}, lng: {p_lng}}},
@@ -146,7 +158,7 @@ def search_places():
             title: "{t}: {name}",
         }});
         var infowindow = new google.maps.InfoWindow({{
-            content: "{t}: {name}<br>距離中心 {dist} 公尺"
+            content: `{info_text}`
         }});
         marker.addListener("click", function() {{
             infowindow.open(map, marker);
