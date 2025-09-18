@@ -3,12 +3,14 @@ import requests
 import math
 from streamlit.components.v1 import html
 
-st.title("地址周邊400公尺查詢")
+st.title("地址周邊查詢")
 
 # Google Maps API Key 與地址
 google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
 address = st.text_input("輸入地址")
-radius = 400  # 搜尋半徑
+
+# 半徑用滑桿控制
+radius = st.slider("選擇搜尋半徑 (公尺)", min_value=200, max_value=600, value=400, step=50)
 
 # 分類 + 子類別
 PLACE_TYPES = {
@@ -89,7 +91,10 @@ def search_category(main_category):
 
     all_places = sorted(all_places, key=lambda x: x[4])
 
+    # 顯示目前搜尋半徑
+    st.write(f"目前搜尋半徑：{radius} 公尺")
     st.subheader(f"【{main_category}】查詢結果（由近到遠）")
+
     if not all_places:
         st.write("該範圍內無相關地點。")
         return
@@ -152,4 +157,3 @@ cols = st.columns(len(PLACE_TYPES))
 for i, cat in enumerate(PLACE_TYPES.keys()):
     if cols[i].button(cat, use_container_width=True):
         search_category(cat)
-
