@@ -13,7 +13,7 @@ address = st.text_input("輸入地址")
 radius = st.slider("選擇搜尋半徑 (公尺)", min_value=200, max_value=600, value=400, step=50)
 
 # 關鍵字搜尋
-keyword = st.text_input("輸入關鍵字 (選填，例如：咖啡、火鍋)")
+keyword = st.text_input("輸入")
 
 # 分類 + 子類別
 PLACE_TYPES = {
@@ -207,3 +207,4 @@ def search_places():
 # 查詢按鈕
 if st.button("開始查詢", use_container_width=True):
     search_places()
+
