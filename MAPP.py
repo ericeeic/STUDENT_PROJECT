@@ -15,7 +15,7 @@ radius = st.slider("選擇搜尋半徑 (公尺)", min_value=200, max_value=600, 
 # 關鍵字搜尋
 keyword = st.text_input("輸入關鍵")
 
-# 分類 + 子類別
+# 分類 + 子類別 (僅供 UI 與關鍵字組合，不再用 type)
 PLACE_TYPES = {
     "教育": {
         "圖書館": "library",
@@ -49,6 +49,7 @@ PLACE_TYPES = {
 # 單選大類別
 selected_category = st.selectbox("選擇想查詢的大類別", ["(不選)", *PLACE_TYPES.keys()])
 
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -57,6 +58,7 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(d_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(d_lambda/2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
+
 
 def search_places():
     if not google_api_key:
@@ -82,52 +84,37 @@ def search_places():
 
     all_places = []
 
-    # 根據選擇的大類別查詢（包含其所有子類別）
+    # ---- 以關鍵字搜尋取代 place type ----
+    search_kw = keyword.strip()
     if selected_category != "(不選)":
-        for sub_type, place_type in PLACE_TYPES[selected_category].items():
-            places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-            places_params = {
-                "location": f"{lat},{lng}",
-                "radius": radius,
-                "type": place_type,
-                "key": google_api_key,
-                "language": "zh-TW"
-            }
-            if keyword:
-                places_params["keyword"] = keyword
-            places_res = requests.get(places_url, params=places_params).json()
-            for place in places_res.get("results", []):
-                name = place.get("name", "未命名")
-                p_lat = place["geometry"]["location"]["lat"]
-                p_lng = place["geometry"]["location"]["lng"]
-                dist = int(haversine(lat, lng, p_lat, p_lng))
-                place_id = place.get("place_id", "")
-                if dist <= radius:  # 過濾超出範圍的結果
-                    all_places.append((sub_type, name, p_lat, p_lng, dist, place_id))
+        # 取出此大類別下的「子類別中文名稱」組成 OR 關鍵字
+        sub_keywords = list(PLACE_TYPES[selected_category].keys())
+        cat_kw = " OR ".join(sub_keywords)
+        search_kw = f"{search_kw} OR {cat_kw}" if search_kw else cat_kw
 
-    # 如果只有輸入關鍵字，也能查詢（不依靠 type）
-    if keyword and selected_category == "(不選)":
-        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        places_params = {
-            "location": f"{lat},{lng}",
-            "radius": radius,
-            "keyword": keyword,
-            "key": google_api_key,
-            "language": "zh-TW"
-        }
-        places_res = requests.get(places_url, params=places_params).json()
-        for place in places_res.get("results", []):
-            name = place.get("name", "未命名")
-            p_lat = place["geometry"]["location"]["lat"]
-            p_lng = place["geometry"]["location"]["lng"]
-            dist = int(haversine(lat, lng, p_lat, p_lng))
-            place_id = place.get("place_id", "")
-            if dist <= radius:
-                all_places.append(("關鍵字", name, p_lat, p_lng, dist, place_id))
+    places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    places_params = {
+        "location": f"{lat},{lng}",
+        "radius": radius,
+        "keyword": search_kw,
+        "key": google_api_key,
+        "language": "zh-TW"
+    }
+    places_res = requests.get(places_url, params=places_params).json()
+
+    for place in places_res.get("results", []):
+        name = place.get("name", "未命名")
+        p_lat = place["geometry"]["location"]["lat"]
+        p_lng = place["geometry"]["location"]["lng"]
+        dist = int(haversine(lat, lng, p_lat, p_lng))
+        place_id = place.get("place_id", "")
+        if dist <= radius:
+            cat_label = selected_category if selected_category != "(不選)" else "關鍵字"
+            all_places.append((cat_label, name, p_lat, p_lng, dist, place_id))
 
     all_places = sorted(all_places, key=lambda x: x[4])
 
-    # 顯示目前搜尋半徑
+    # 顯示搜尋半徑與結果
     st.write(f"目前搜尋半徑：{radius} 公尺")
     st.subheader("查詢結果（由近到遠）")
 
@@ -135,11 +122,11 @@ def search_places():
         st.write("該範圍內無相關地點。")
         return
 
-    # 清單顯示在主畫面
+    # 主畫面清單
     for t, name, _, _, dist, _ in all_places:
         st.write(f"**{t}** - {name} ({dist} 公尺)")
 
-    # 側邊欄顯示 Google Maps 連結
+    # 側邊欄連結
     st.sidebar.subheader("Google 地圖連結")
     for t, name, _, _, dist, place_id in all_places:
         if place_id:
@@ -165,7 +152,7 @@ def search_places():
         }});
         """
 
-    # 加入搜尋範圍圓圈
+    # 搜尋範圍圓圈
     circle_js = f"""
         var circle = new google.maps.Circle({{
             strokeColor: "#FF0000",
@@ -204,8 +191,7 @@ def search_places():
     """
     html(map_html, height=500)
 
+
 # 查詢按鈕
 if st.button("開始查詢", use_container_width=True):
     search_places()
-
-
