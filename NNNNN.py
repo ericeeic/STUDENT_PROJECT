@@ -3,8 +3,9 @@ import requests
 import math
 import folium
 from streamlit.components.v1 import html
+import google.generativeai as genai
 
-st.title("🏠 房屋比較 + Google Places 雙地圖 + 顏色標記 + 半徑顯示")
+st.title("🏠 房屋比較 + Google Places 雙地圖 + Gemini 分析 + 顏色標記")
 
 # ===============================
 # Google Places 類別
@@ -89,7 +90,7 @@ def add_markers(m, info_dict):
             folium.Marker(
                 [lat, lng],
                 popup=f"{category}：{name}（{dist} 公尺）",
-                icon=folium.Icon(color="blue", icon="info-sign")  # folium Icon 顏色固定，可用 CircleMarker 改顏色
+                icon=folium.Icon(color="blue", icon="info-sign")
             ).add_to(m)
             folium.CircleMarker(
                 location=[lat, lng],
@@ -99,12 +100,21 @@ def add_markers(m, info_dict):
                 fill_opacity=0.8
             ).add_to(m)
 
+def format_info(address, info_dict):
+    lines = [f"房屋（{address}）："]
+    for k, v in info_dict.items():
+        lines.append(f"- {k}: {len(v)} 個")
+    return "\n".join(lines)
+
 # ===============================
 # Streamlit 介面
 # ===============================
 google_key = st.text_input("🔑 輸入 Google Maps API Key", type="password")
+gemini_key = st.text_input("🔑 輸入 Gemini API Key", type="password")
 
-if google_key:
+if google_key and gemini_key:
+    genai.configure(api_key=gemini_key)
+
     col1, col2 = st.columns(2)
     with col1:
         addr_a = st.text_input("房屋 A 地址")
@@ -144,6 +154,9 @@ if google_key:
         info_a = query_google_places(lat_a, lng_a, google_key, selected_categories, keyword, radius)
         info_b = query_google_places(lat_b, lng_b, google_key, selected_categories, keyword, radius)
 
+        text_a = format_info(addr_a, info_a)
+        text_b = format_info(addr_b, info_b)
+
         # 房屋 A 地圖
         st.subheader("📍 房屋 A 周邊地圖")
         m_a = folium.Map(location=[lat_a, lng_a], zoom_start=15)
@@ -159,3 +172,24 @@ if google_key:
         folium.Circle([lat_b, lng_b], radius=radius, color="blue", fill=True, fill_opacity=0.1).add_to(m_b)
         add_markers(m_b, info_b)
         html(m_b._repr_html_(), height=400)
+
+        # ===============================
+        # Gemini 分析
+        # ===============================
+        prompt = f"""你是一位房地產分析專家，請比較以下兩間房屋的生活機能，
+        並列出優缺點與結論：
+        {text_a}
+        {text_b}
+        """
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(prompt)
+
+        st.subheader("📊 Gemini 分析結果")
+        st.write(response.text)
+
+        st.sidebar.subheader("🏠 房屋資訊對照表")
+        st.sidebar.markdown(f"### 房屋 A\n{text_a}")
+        st.sidebar.markdown(f"### 房屋 B\n{text_b}")
+
+else:
+    st.info("請先輸入 Google Maps 與 Gemini API Key")
