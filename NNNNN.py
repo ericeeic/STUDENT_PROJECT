@@ -5,27 +5,25 @@ import folium
 from streamlit.components.v1 import html
 import google.generativeai as genai
 
-st.title("🏠 房屋比較 + Google Places 雙地圖 + Gemini 分析 + 顏色標記")
+st.title("🏠 房屋比較 + Google Places 雙地圖 + Gemini 分析 + 關鍵字搜尋")
 
 # ===============================
-# Google Places 類別
+# 大類別對應關鍵字
 # ===============================
-PLACE_TYPES = {
-    "交通": ["bus_station", "subway_station", "train_station"],
-    "超商": ["convenience_store"],
-    "餐廳": ["restaurant", "cafe"],
-    "學校": ["school", "university", "primary_school", "secondary_school"],
-    "醫院": ["hospital"],
-    "藥局": ["pharmacy"],
+CATEGORY_KEYWORDS = {
+    "教育": ["小學", "中學", "大學", "圖書館", "幼兒園"],
+    "健康與保健": ["醫院", "診所", "牙醫", "藥局"],
+    "購物": ["便利商店", "超市", "百貨公司"],
+    "餐飲": ["餐廳", "咖啡廳"],
+    "交通運輸": ["公車站", "地鐵站", "火車站"]
 }
 
 CATEGORY_COLORS = {
-    "交通": "#800080",
-    "超商": "#FF8C00",
-    "餐廳": "#FF0000",
-    "學校": "#1E90FF",
-    "醫院": "#32CD32",
-    "藥局": "#008080",
+    "教育": "#1E90FF",
+    "健康與保健": "#32CD32",
+    "購物": "#FF8C00",
+    "餐飲": "#FF0000",
+    "交通運輸": "#800080",
     "關鍵字": "#000000"
 }
 
@@ -47,35 +45,39 @@ def haversine(lat1, lon1, lat2, lon2):
     d_phi = math.radians(lat2 - lat1)
     d_lambda = math.radians(lon2 - lon1)
     a = math.sin(d_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(d_lambda/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    return R * c
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-def query_google_places(lat, lng, api_key, selected_categories, keyword="", radius=500):
-    results = {k: [] for k in selected_categories}
-    if keyword:
+def query_by_keyword(lat, lng, api_key, selected_categories, keyword="", radius=500):
+    results = {cat: [] for cat in selected_categories}
+    if keyword and not selected_categories:
         results["關鍵字"] = []
-    for label in selected_categories:
-        for t in PLACE_TYPES[label]:
-            url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+
+    for cat in selected_categories:
+        for kw in CATEGORY_KEYWORDS[cat]:
+            search_kw = f"{kw} {keyword}" if keyword else kw
             params = {
                 "location": f"{lat},{lng}",
                 "radius": radius,
-                "type": t,
-                "keyword": keyword if keyword else "",
-                "language": "zh-TW",
+                "keyword": search_kw,
                 "key": api_key,
+                "language": "zh-TW"
             }
-            r = requests.get(url, params=params, timeout=10).json()
+            r = requests.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params=params).json()
             for place in r.get("results", []):
                 p_lat = place["geometry"]["location"]["lat"]
                 p_lng = place["geometry"]["location"]["lng"]
                 dist = int(haversine(lat, lng, p_lat, p_lng))
-                results[label].append((place.get("name", "未命名"), p_lat, p_lng, dist))
-    # 關鍵字單獨搜尋
-    if keyword and "關鍵字" in results:
-        url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        params = {"location": f"{lat},{lng}", "radius": radius, "keyword": keyword, "key": api_key, "language": "zh-TW"}
-        r = requests.get(url, params=params, timeout=10).json()
+                results[cat].append((place.get("name", "未命名"), p_lat, p_lng, dist))
+
+    if keyword and not selected_categories:
+        params = {
+            "location": f"{lat},{lng}",
+            "radius": radius,
+            "keyword": keyword,
+            "key": api_key,
+            "language": "zh-TW"
+        }
+        r = requests.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params=params).json()
         for place in r.get("results", []):
             p_lat = place["geometry"]["location"]["lat"]
             p_lng = place["geometry"]["location"]["lng"]
@@ -126,8 +128,8 @@ if google_key and gemini_key:
 
     st.subheader("選擇生活機能類別")
     selected_categories = []
-    cols = st.columns(len(PLACE_TYPES))
-    for i, cat in enumerate(PLACE_TYPES.keys()):
+    cols = st.columns(len(CATEGORY_KEYWORDS))
+    for i, cat in enumerate(CATEGORY_KEYWORDS.keys()):
         color = CATEGORY_COLORS[cat]
         with cols[i]:
             st.markdown(
@@ -151,8 +153,8 @@ if google_key and gemini_key:
             st.error("❌ 無法解析其中一個地址")
             st.stop()
 
-        info_a = query_google_places(lat_a, lng_a, google_key, selected_categories, keyword, radius)
-        info_b = query_google_places(lat_b, lng_b, google_key, selected_categories, keyword, radius)
+        info_a = query_by_keyword(lat_a, lng_a, google_key, selected_categories, keyword, radius)
+        info_b = query_by_keyword(lat_b, lng_b, google_key, selected_categories, keyword, radius)
 
         text_a = format_info(addr_a, info_a)
         text_b = format_info(addr_b, info_b)
@@ -173,9 +175,7 @@ if google_key and gemini_key:
         add_markers(m_b, info_b)
         html(m_b._repr_html_(), height=400)
 
-        # ===============================
         # Gemini 分析
-        # ===============================
         prompt = f"""你是一位房地產分析專家，請比較以下兩間房屋的生活機能，
         並列出優缺點與結論：
         {text_a}
