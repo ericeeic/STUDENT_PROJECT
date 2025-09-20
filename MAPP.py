@@ -15,7 +15,7 @@ radius = st.slider("選擇搜尋半徑 (公尺)", min_value=200, max_value=600, 
 # 關鍵字
 keyword = st.text_input("輸入關鍵字")
 
-# 大類別與子關鍵字（僅用關鍵字搜尋）
+# 大類別與子關鍵字
 PLACE_TYPES = {
     "教育": ["圖書館", "幼兒園", "小學", "學校", "中學", "大學"],
     "健康與保健": ["牙醫", "醫師", "藥局", "醫院"],
@@ -40,7 +40,6 @@ selected_categories = []
 cols = st.columns(len(PLACE_TYPES))
 for i, cat in enumerate(PLACE_TYPES.keys()):
     color = CATEGORY_COLORS[cat]
-    # 在按鈕左側顯示顏色圓點
     with cols[i]:
         st.markdown(
             f'<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:{color};margin-right:4px"></span>',
@@ -58,6 +57,7 @@ if keyword:
         unsafe_allow_html=True,
     )
 
+# ====== 工具函數 ======
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -87,13 +87,13 @@ def search_places():
     lat, lng = geo_res["results"][0]["geometry"]["location"].values()
     all_places = []
 
-    # 依大類別與子關鍵字查詢
+    # 1️⃣ 大類別搜尋
     for cat in selected_categories:
         for kw in PLACE_TYPES[cat]:
             params = {
                 "location": f"{lat},{lng}",
                 "radius": radius,
-                "keyword": kw + (f" {keyword}" if keyword else ""),
+                "keyword": kw,
                 "key": google_api_key,
                 "language": "zh-TW"
             }
@@ -105,8 +105,8 @@ def search_places():
                 if dist <= radius:
                     all_places.append((cat, kw, p.get("name", "未命名"), p_lat, p_lng, dist, p.get("place_id", "")))
 
-    # 只有關鍵字（無大類別）搜尋
-    if keyword and not selected_categories:
+    # 2️⃣ 單純關鍵字搜尋（不管是否有選大類別）
+    if keyword:
         params = {
             "location": f"{lat},{lng}",
             "radius": radius,
@@ -138,7 +138,7 @@ def search_places():
         if pid:
             st.sidebar.markdown(f"- [{name} ({dist}m)](https://www.google.com/maps/place/?q=place_id:{pid})")
 
-    # 地圖標記
+    # ====== 地圖標記 ======
     markers_js = ""
     for cat, kw, name, p_lat, p_lng, dist, pid in all_places:
         color = CATEGORY_COLORS.get(cat, "#000000")
