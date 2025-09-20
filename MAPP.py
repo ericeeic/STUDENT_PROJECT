@@ -3,7 +3,7 @@ import requests
 import math
 from streamlit.components.v1 import html
 
-st.title("地址周邊查詢（多類別按鈕 + 彩色標記）")
+st.title("地址周邊查詢（多類別按鈕 + 彩色標記 + 關鍵字顏色）")
 
 # Google Maps API Key 與地址
 google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
@@ -15,7 +15,7 @@ radius = st.slider("選擇搜尋半徑 (公尺)", min_value=200, max_value=600, 
 # 關鍵字
 keyword = st.text_input("輸入關鍵字")
 
-# 大類別與子類別（只用關鍵字搜尋，不用 type）
+# 大類別與子關鍵字（僅用關鍵字搜尋）
 PLACE_TYPES = {
     "教育": ["圖書館", "幼兒園", "小學", "學校", "中學", "大學"],
     "健康與保健": ["牙醫", "醫師", "藥局", "醫院"],
@@ -24,22 +24,39 @@ PLACE_TYPES = {
     "餐飲": ["餐廳"]
 }
 
-# 每個大類別對應不同顏色
+# 標記顏色 (含關鍵字)
 CATEGORY_COLORS = {
-    "教育": "#1E90FF",         # 藍
-    "健康與保健": "#32CD32",    # 綠
-    "購物": "#FF8C00",         # 橘
-    "交通運輸": "#800080",     # 紫
-    "餐飲": "#FF0000"          # 紅
+    "教育": "#1E90FF",
+    "健康與保健": "#32CD32",
+    "購物": "#FF8C00",
+    "交通運輸": "#800080",
+    "餐飲": "#FF0000",
+    "關鍵字": "#000000"  # 黑色給單純關鍵字搜尋
 }
 
-# ====== 按鈕式多選 ======
+# ====== 按鈕式多選 + 顏色圓點 ======
 st.subheader("選擇大類別（可多選）")
 selected_categories = []
 cols = st.columns(len(PLACE_TYPES))
 for i, cat in enumerate(PLACE_TYPES.keys()):
-    if cols[i].toggle(cat, key=f"cat_{cat}"):
-        selected_categories.append(cat)
+    color = CATEGORY_COLORS[cat]
+    # 在按鈕左側顯示顏色圓點
+    with cols[i]:
+        st.markdown(
+            f'<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:{color};margin-right:4px"></span>',
+            unsafe_allow_html=True,
+        )
+        if st.toggle(cat, key=f"cat_{cat}"):
+            selected_categories.append(cat)
+
+# 如果有輸入關鍵字也顯示一個顏色圓點
+if keyword:
+    kw_color = CATEGORY_COLORS["關鍵字"]
+    st.markdown(
+        f'<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:{kw_color};margin-right:4px"></span>'
+        f'**關鍵字搜尋結果顏色**',
+        unsafe_allow_html=True,
+    )
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -61,7 +78,6 @@ def search_places():
         st.error("請至少選擇一個大類別或輸入關鍵字")
         return
 
-    # 轉換地址為座標
     geo_url = "https://maps.googleapis.com/maps/api/geocode/json"
     geo_res = requests.get(geo_url, params={"address": address, "key": google_api_key, "language": "zh-TW"}).json()
     if geo_res.get("status") != "OK":
@@ -71,32 +87,26 @@ def search_places():
     lat, lng = geo_res["results"][0]["geometry"]["location"].values()
     all_places = []
 
-    # 依每個大類別與其子關鍵字查詢
+    # 依大類別與子關鍵字查詢
     for cat in selected_categories:
         for kw in PLACE_TYPES[cat]:
-            places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
             params = {
                 "location": f"{lat},{lng}",
                 "radius": radius,
-                "keyword": kw,
+                "keyword": kw + (f" {keyword}" if keyword else ""),
                 "key": google_api_key,
                 "language": "zh-TW"
             }
-            if keyword:
-                params["keyword"] += f" {keyword}"
-            res = requests.get(places_url, params=params).json()
+            res = requests.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params=params).json()
             for p in res.get("results", []):
-                name = p.get("name", "未命名")
                 p_lat = p["geometry"]["location"]["lat"]
                 p_lng = p["geometry"]["location"]["lng"]
                 dist = int(haversine(lat, lng, p_lat, p_lng))
-                pid = p.get("place_id", "")
                 if dist <= radius:
-                    all_places.append((cat, kw, name, p_lat, p_lng, dist, pid))
+                    all_places.append((cat, kw, p.get("name", "未命名"), p_lat, p_lng, dist, p.get("place_id", "")))
 
-    # 如果只輸入關鍵字（沒有選大類別）
+    # 只有關鍵字（無大類別）搜尋
     if keyword and not selected_categories:
-        places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
         params = {
             "location": f"{lat},{lng}",
             "radius": radius,
@@ -104,15 +114,13 @@ def search_places():
             "key": google_api_key,
             "language": "zh-TW"
         }
-        res = requests.get(places_url, params=params).json()
+        res = requests.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params=params).json()
         for p in res.get("results", []):
-            name = p.get("name", "未命名")
             p_lat = p["geometry"]["location"]["lat"]
             p_lng = p["geometry"]["location"]["lng"]
             dist = int(haversine(lat, lng, p_lat, p_lng))
-            pid = p.get("place_id", "")
             if dist <= radius:
-                all_places.append(("關鍵字", keyword, name, p_lat, p_lng, dist, pid))
+                all_places.append(("關鍵字", keyword, p.get("name", "未命名"), p_lat, p_lng, dist, p.get("place_id", "")))
 
     all_places.sort(key=lambda x: x[5])
 
@@ -122,11 +130,9 @@ def search_places():
         st.write("範圍內無符合地點。")
         return
 
-    # 清單
     for cat, kw, name, _, _, dist, _ in all_places:
         st.write(f"**[{cat}]** {kw} - {name} ({dist} 公尺)")
 
-    # 側邊欄
     st.sidebar.subheader("Google 地圖連結")
     for cat, kw, name, _, _, dist, pid in all_places:
         if pid:
@@ -135,9 +141,9 @@ def search_places():
     # 地圖標記
     markers_js = ""
     for cat, kw, name, p_lat, p_lng, dist, pid in all_places:
+        color = CATEGORY_COLORS.get(cat, "#000000")
         gmap_url = f"https://www.google.com/maps/place/?q=place_id:{pid}" if pid else ""
         info = f'{cat}-{kw}: <a href="{gmap_url}" target="_blank">{name}</a><br>距離中心 {dist} 公尺'
-        color = CATEGORY_COLORS.get(cat, "#000000")
         markers_js += f"""
         new google.maps.Marker({{
             position: {{lat: {p_lat}, lng: {p_lng}}},
