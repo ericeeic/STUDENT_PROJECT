@@ -1,191 +1,195 @@
 import streamlit as st
 import requests
 import math
+import folium
 from streamlit.components.v1 import html
+import google.generativeai as genai
 
-st.title("地址周邊查詢（多分類 + 不同標記顏色）")
-
-# ===============================
-# 使用者輸入
-# ===============================
-google_api_key = st.text_input("輸入 Google Maps API Key", type="password")
-address = st.text_input("輸入地址")
-radius = st.slider("選擇搜尋半徑 (公尺)", min_value=200, max_value=600, value=400, step=50)
-keyword = st.text_input("關鍵字（可選）")
+st.title("🏠 房屋比較 + Google Places 雙地圖 + Gemini 分析 + 關鍵字搜尋")
 
 # ===============================
-# 分類與顏色
+# 大類別對應關鍵字
 # ===============================
-PLACE_TYPES = {
-    "教育": ["圖書館", "幼兒園", "小學", "學校", "中學", "大學"],
-    "健康與保健": ["牙醫", "醫師", "藥局", "醫院"],
+CATEGORY_KEYWORDS = {
+    "教育": ["小學", "中學", "大學", "圖書館", "幼兒園"],
+    "健康與保健": ["醫院", "診所", "牙醫", "藥局"],
     "購物": ["便利商店", "超市", "百貨公司"],
-    "交通運輸": ["公車站", "地鐵站", "火車站"],
-    "餐飲": ["餐廳"]
+    "餐飲": ["餐廳", "咖啡廳"],
+    "交通運輸": ["公車站", "地鐵站", "火車站"]
 }
 
 CATEGORY_COLORS = {
-    "教育": "blue",
-    "健康與保健": "green",
-    "購物": "orange",
-    "交通運輸": "purple",
-    "餐飲": "yellow"
+    "教育": "#1E90FF",
+    "健康與保健": "#32CD32",
+    "購物": "#FF8C00",
+    "餐飲": "#FF0000",
+    "交通運輸": "#800080",
+    "關鍵字": "#000000"
 }
 
-# 單選與多選
-selected_category = st.selectbox("選擇單一大類別（可選）", ["(不選)", *PLACE_TYPES.keys()])
-selected_categories = st.multiselect("選擇多個大類別（可複選）", list(PLACE_TYPES.keys()))
+# ===============================
+# 工具函式
+# ===============================
+def geocode_address(address: str, api_key: str):
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {"address": address, "key": api_key, "language": "zh-TW"}
+    r = requests.get(url, params=params, timeout=10).json()
+    if r.get("status") == "OK" and r["results"]:
+        loc = r["results"][0]["geometry"]["location"]
+        return loc["lat"], loc["lng"]
+    return None, None
 
-# ===============================
-# 工具函數
-# ===============================
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     d_phi = math.radians(lat2 - lat1)
     d_lambda = math.radians(lon2 - lon1)
     a = math.sin(d_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(d_lambda/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-# ===============================
-# 搜尋函數
-# ===============================
-def search_places():
-    if not google_api_key:
-        st.error("請先輸入 Google Maps API Key")
-        return
-    if not address:
-        st.error("請輸入地址")
-        return
-    if not selected_categories and selected_category == "(不選)" and not keyword:
-        st.error("請至少選擇一個大類別或輸入關鍵字")
-        return
+def query_by_keyword(lat, lng, api_key, selected_categories, keyword="", radius=500):
+    results = {cat: [] for cat in selected_categories}
+    if keyword and not selected_categories:
+        results["關鍵字"] = []
 
-    # 地址轉經緯度
-    geo_url = "https://maps.googleapis.com/maps/api/geocode/json"
-    geo_params = {"address": address, "key": google_api_key, "language": "zh-TW"}
-    geo_res = requests.get(geo_url, params=geo_params).json()
-    if geo_res.get("status") != "OK":
-        st.error("無法解析該地址")
-        return
-    location = geo_res["results"][0]["geometry"]["location"]
-    lat, lng = location["lat"], location["lng"]
-
-    # 組合搜尋關鍵字
-    search_keywords = []
-    if selected_category != "(不選)":
-        search_keywords.extend(PLACE_TYPES[selected_category])
     for cat in selected_categories:
-        search_keywords.extend(PLACE_TYPES[cat])
-    if keyword:
-        search_keywords.append(keyword)
-    search_kw = " OR ".join(search_keywords)
+        for kw in CATEGORY_KEYWORDS[cat]:
+            search_kw = f"{kw} {keyword}" if keyword else kw
+            params = {
+                "location": f"{lat},{lng}",
+                "radius": radius,
+                "keyword": search_kw,
+                "key": api_key,
+                "language": "zh-TW"
+            }
+            r = requests.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params=params).json()
+            for place in r.get("results", []):
+                p_lat = place["geometry"]["location"]["lat"]
+                p_lng = place["geometry"]["location"]["lng"]
+                dist = int(haversine(lat, lng, p_lat, p_lng))
+                results[cat].append((place.get("name", "未命名"), p_lat, p_lng, dist))
 
-    # 呼叫 Places API
-    places_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-    places_params = {
-        "location": f"{lat},{lng}",
-        "radius": radius,
-        "keyword": search_kw,
-        "key": google_api_key,
-        "language": "zh-TW"
-    }
-    places_res = requests.get(places_url, params=places_params).json()
+    if keyword and not selected_categories:
+        params = {
+            "location": f"{lat},{lng}",
+            "radius": radius,
+            "keyword": keyword,
+            "key": api_key,
+            "language": "zh-TW"
+        }
+        r = requests.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json", params=params).json()
+        for place in r.get("results", []):
+            p_lat = place["geometry"]["location"]["lat"]
+            p_lng = place["geometry"]["location"]["lng"]
+            dist = int(haversine(lat, lng, p_lat, p_lng))
+            results["關鍵字"].append((place.get("name", "未命名"), p_lat, p_lng, dist))
+    return results
 
-    all_places = []
-    for place in places_res.get("results", []):
-        name = place.get("name", "未命名")
-        p_lat = place["geometry"]["location"]["lat"]
-        p_lng = place["geometry"]["location"]["lng"]
-        dist = int(haversine(lat, lng, p_lat, p_lng))
-        place_id = place.get("place_id", "")
-        if dist <= radius:
-            # 判斷類別
-            cat_label = next((cat for cat, names in PLACE_TYPES.items() if name in names), "關鍵字")
-            all_places.append((cat_label, name, p_lat, p_lng, dist, place_id))
+def add_markers(m, info_dict):
+    for category, places in info_dict.items():
+        color = CATEGORY_COLORS.get(category, "#000000")
+        for name, lat, lng, dist in places:
+            folium.Marker(
+                [lat, lng],
+                popup=f"{category}：{name}（{dist} 公尺）",
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m)
+            folium.CircleMarker(
+                location=[lat, lng],
+                radius=6,
+                color=color,
+                fill=True,
+                fill_opacity=0.8
+            ).add_to(m)
 
-    all_places = sorted(all_places, key=lambda x: x[4])
+def format_info(address, info_dict):
+    lines = [f"房屋（{address}）："]
+    for k, v in info_dict.items():
+        lines.append(f"- {k}: {len(v)} 個")
+    return "\n".join(lines)
 
-    # 顯示結果
-    st.write(f"目前搜尋半徑：{radius} 公尺")
-    st.subheader("查詢結果（由近到遠）")
-    if not all_places:
-        st.write("該範圍內無相關地點。")
-        return
-    for t, name, _, _, dist, _ in all_places:
-        st.write(f"**{t}** - {name} ({dist} 公尺)")
+# ===============================
+# Streamlit 介面
+# ===============================
+google_key = st.text_input("🔑 輸入 Google Maps API Key", type="password")
+gemini_key = st.text_input("🔑 輸入 Gemini API Key", type="password")
 
-    # 側邊欄連結
-    st.sidebar.subheader("Google 地圖連結")
-    for t, name, _, _, dist, place_id in all_places:
-        if place_id:
-            color = CATEGORY_COLORS.get(t, "red")
-            url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
-            st.sidebar.markdown(f"- <span style='color:{color}'>{t}</span> [{name} ({dist} 公尺)]({url})", unsafe_allow_html=True)
+if google_key and gemini_key:
+    genai.configure(api_key=gemini_key)
 
-    # 地圖顯示
-    markers_js = ""
-    for t, name, p_lat, p_lng, dist, place_id in all_places:
-        gmap_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}" if place_id else ""
-        color = CATEGORY_COLORS.get(t, "red")
-        icon_url = f"http://maps.google.com/mapfiles/ms/icons/{color}-dot.png"
-        info_text = f'{t}: <a href="{gmap_url}" target="_blank">{name}</a><br>距離中心 {dist} 公尺'
-        markers_js += f"""
-        var marker = new google.maps.Marker({{
-            position: {{lat: {p_lat}, lng: {p_lng}}},
-            map: map,
-            title: "{t}: {name}",
-            icon: {{ url: "{icon_url}" }}
-        }});
-        var infowindow = new google.maps.InfoWindow({{
-            content: `{info_text}`
-        }});
-        marker.addListener("click", function() {{
-            infowindow.open(map, marker);
-        }});
+    col1, col2 = st.columns(2)
+    with col1:
+        addr_a = st.text_input("房屋 A 地址")
+    with col2:
+        addr_b = st.text_input("房屋 B 地址")
+
+    radius = st.slider("搜尋半徑 (公尺)", 100, 2000, 500, 50)
+    keyword = st.text_input("關鍵字搜尋（可留空）")
+
+    st.subheader("選擇生活機能類別")
+    selected_categories = []
+    cols = st.columns(len(CATEGORY_KEYWORDS))
+    for i, cat in enumerate(CATEGORY_KEYWORDS.keys()):
+        color = CATEGORY_COLORS[cat]
+        with cols[i]:
+            st.markdown(
+                f'<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:{color};margin-right:4px"></span>',
+                unsafe_allow_html=True
+            )
+            if st.checkbox(cat, key=f"cat_{cat}", value=True):
+                selected_categories.append(cat)
+
+    if st.button("比較房屋"):
+        if not addr_a or not addr_b:
+            st.warning("請輸入兩個地址")
+            st.stop()
+        if not selected_categories and not keyword:
+            st.warning("請至少選擇一個類別或輸入關鍵字")
+            st.stop()
+
+        lat_a, lng_a = geocode_address(addr_a, google_key)
+        lat_b, lng_b = geocode_address(addr_b, google_key)
+        if not lat_a or not lat_b:
+            st.error("❌ 無法解析其中一個地址")
+            st.stop()
+
+        info_a = query_by_keyword(lat_a, lng_a, google_key, selected_categories, keyword, radius)
+        info_b = query_by_keyword(lat_b, lng_b, google_key, selected_categories, keyword, radius)
+
+        text_a = format_info(addr_a, info_a)
+        text_b = format_info(addr_b, info_b)
+
+        # 房屋 A 地圖
+        st.subheader("📍 房屋 A 周邊地圖")
+        m_a = folium.Map(location=[lat_a, lng_a], zoom_start=15)
+        folium.Marker([lat_a, lng_a], popup=f"房屋 A：{addr_a}", icon=folium.Icon(color="red", icon="home")).add_to(m_a)
+        folium.Circle([lat_a, lng_a], radius=radius, color="red", fill=True, fill_opacity=0.1).add_to(m_a)
+        add_markers(m_a, info_a)
+        html(m_a._repr_html_(), height=400)
+
+        # 房屋 B 地圖
+        st.subheader("📍 房屋 B 周邊地圖")
+        m_b = folium.Map(location=[lat_b, lng_b], zoom_start=15)
+        folium.Marker([lat_b, lng_b], popup=f"房屋 B：{addr_b}", icon=folium.Icon(color="blue", icon="home")).add_to(m_b)
+        folium.Circle([lat_b, lng_b], radius=radius, color="blue", fill=True, fill_opacity=0.1).add_to(m_b)
+        add_markers(m_b, info_b)
+        html(m_b._repr_html_(), height=400)
+
+        # Gemini 分析
+        prompt = f"""你是一位房地產分析專家，請比較以下兩間房屋的生活機能，
+        並列出優缺點與結論：
+        {text_a}
+        {text_b}
         """
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(prompt)
 
-    circle_js = f"""
-        var circle = new google.maps.Circle({{
-            strokeColor: "#FF0000",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#FF0000",
-            fillOpacity: 0.1,
-            map: map,
-            center: center,
-            radius: {radius}
-        }});
-    """
+        st.subheader("📊 Gemini 分析結果")
+        st.write(response.text)
 
-    map_html = f"""
-    <div id="map" style="height:500px;"></div>
-    <script>
-    function initMap() {{
-        var center = {{lat: {lat}, lng: {lng}}};
-        var map = new google.maps.Map(document.getElementById('map'), {{
-            zoom: 16,
-            center: center
-        }});
+        st.sidebar.subheader("🏠 房屋資訊對照表")
+        st.sidebar.markdown(f"### 房屋 A\n{text_a}")
+        st.sidebar.markdown(f"### 房屋 B\n{text_b}")
 
-        new google.maps.Marker({{
-            position: center,
-            map: map,
-            title: "查詢中心",
-            icon: {{ url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png" }}
-        }});
-
-        {circle_js}
-        {markers_js}
-    }}
-    </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key={google_api_key}&callback=initMap" async defer></script>
-    """
-    html(map_html, height=500)
-
-# ===============================
-# 查詢按鈕
-# ===============================
-if st.button("開始查詢", use_container_width=True):
-    search_places()
+else:
+    st.info("請先輸入 Google Maps 與 Gemini API Key")
